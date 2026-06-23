@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nu-Ko Capital · P&L Sankey</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-sankey/0.12.3/d3-sankey.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080808;
+  --bg2:#0f0f0f;
+  --bg3:#161616;
+  --bg4:#1e1e1e;
+  --bg5:#272727;
+  --red:#c8102e;
+  --red2:#a50d25;
+  --red3:rgba(200,16,46,.1);
+  --red4:rgba(200,16,46,.22);
+  --wh:#f2f2ee;
+  --wh2:#c8c8c2;
+  --wh3:#888882;
+  --wh4:#4a4a47;
+  --green:#1a9068;
+  --green2:rgba(26,144,104,.15);
+  --amber:#c49412;
+  --blue:#1a5fa0;
+  --r:5px;--r2:8px;--r3:12px;
+}
+html,body{background:var(--bg);color:var(--wh);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+::selection{background:var(--red);color:#fff}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:var(--bg5)}
+
+/* ── TOPBAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;height:52px;
+  border-bottom:1px solid var(--bg4);
+  background:var(--bg2);
+  position:sticky;top:0;z-index:50;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{
+  width:28px;height:28px;background:var(--red);border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;color:#fff;letter-spacing:-.02em;
+  flex-shrink:0;
+}
+.brand-name{font-size:13px;font-weight:500;color:var(--wh);letter-spacing:-.01em}
+.brand-sep{width:1px;height:16px;background:var(--bg5);margin:0 4px}
+.brand-sub{font-size:11px;color:var(--wh4);font-family:'DM Mono',monospace}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.badge-live{
+  display:flex;align-items:center;gap:5px;
+  font-size:10px;font-family:'DM Mono',monospace;color:var(--wh4);
+  background:var(--bg4);border:1px solid var(--bg5);
+  border-radius:20px;padding:3px 10px;
+}
+.badge-live.active{color:var(--green);border-color:rgba(26,144,104,.3);background:rgba(26,144,104,.08)}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.live-dot.on{animation:blink 1.8s ease infinite}
+.btn{
+  font-family:'Inter',sans-serif;font-size:11px;font-weight:500;
+  padding:6px 14px;border-radius:var(--r);cursor:pointer;transition:all .15s;
+  border:1px solid var(--bg5);background:var(--bg4);color:var(--wh2);
+}
+.btn:hover{background:var(--bg5);color:var(--wh)}
+.btn-red{background:var(--red);border-color:var(--red);color:#fff}
+.btn-red:hover{background:var(--red2)}
+.btn-red:disabled{opacity:.4;cursor:default}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 52px)}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  background:var(--bg2);border-right:1px solid var(--bg4);
+  display:flex;flex-direction:column;
+  position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;
+}
+.sidebar-section{padding:20px 16px 0}
+.s-label{
+  font-size:9px;font-family:'DM Mono',monospace;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--wh4);
+  margin-bottom:8px;padding:0 4px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;
+  border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:400;
+  color:var(--wh3);border:1px solid transparent;transition:all .15s;margin-bottom:2px;
+}
+.nav-item:hover{background:var(--bg4);color:var(--wh2)}
+.nav-item.active{background:var(--red3);border-color:var(--red4);color:var(--wh)}
+.nav-icon{font-size:14px;width:14px;text-align:center;opacity:.6;flex-shrink:0}
+.nav-item.active .nav-icon{opacity:1;color:var(--red)}
+
+/* ── UPLOAD ZONE ── */
+.upload-section{padding:20px 16px}
+.drop-zone{
+  border:1px dashed var(--bg5);border-radius:var(--r2);
+  padding:20px 16px;text-align:center;cursor:pointer;
+  transition:all .2s;background:var(--bg3);
+}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--red);background:var(--red3)}
+.drop-icon{font-size:22px;margin-bottom:8px;color:var(--wh4)}
+.drop-zone.drag .drop-icon{color:var(--red)}
+.drop-title{font-size:12px;font-weight:500;color:var(--wh2);margin-bottom:3px}
+.drop-sub{font-size:10px;color:var(--wh4);font-family:'DM Mono',monospace}
+.file-loaded{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(26,144,104,.08);border:1px solid rgba(26,144,104,.2);
+  border-radius:var(--r);padding:8px 10px;
+}
+.file-name{font-size:11px;font-family:'DM Mono',monospace;color:var(--green);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-clear{font-size:16px;color:var(--wh4);cursor:pointer;transition:color .15s;flex-shrink:0}
+.file-clear:hover{color:var(--red)}
+
+/* ── SIDEBAR STATS ── */
+.sidebar-stats{padding:0 16px 20px;flex:1}
+.stat-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:7px 0;border-bottom:1px solid var(--bg4);
+  font-size:11px;
+}
+.stat-item:last-child{border-bottom:none}
+.stat-label{color:var(--wh4);font-family:'DM Mono',monospace}
+.stat-val{font-family:'DM Mono',monospace;font-weight:500}
+.stat-val.pos{color:var(--green)}.stat-val.neg{color:var(--red)}.stat-val.neu{color:var(--wh2)}
+.sidebar-footer{
+  padding:14px 16px;border-top:1px solid var(--bg4);
+  font-size:9px;font-family:'DM Mono',monospace;color:var(--wh4);line-height:1.8;
+}
+
+/* ── MAIN ── */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.content{padding:28px 32px;flex:1}
+
+/* ── EMPTY STATE ── */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:420px;gap:16px;
+}
+.empty-icon{font-size:40px;color:var(--bg5)}
+.empty-title{font-size:18px;font-weight:500;color:var(--wh2)}
+.empty-sub{font-size:13px;color:var(--wh4);text-align:center;max-width:320px;line-height:1.6}
+.empty-steps{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+  width:100%;max-width:480px;margin-top:8px;
+}
+.step{background:var(--bg3);border:1px solid var(--bg4);border-radius:var(--r2);padding:14px;text-align:center}
+.step-n{font-size:10px;font-family:'DM Mono',monospace;color:var(--red);margin-bottom:6px}
+.step-t{font-size:12px;font-weight:500;color:var(--wh2);margin-bottom:3px}
+.step-s{font-size:10px;color:var(--wh4)}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--bg4);border:1px solid var(--bg4);border-radius:var(--r2);overflow:hidden;margin-bottom:24px}
+.kpi{background:var(--bg2);padding:16px 18px 14px;transition:background .15s;position:relative}
+.kpi:hover{background:var(--bg3)}
+.kpi.accent::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}
+.kl{font-family:'DM Mono',monospace;font-size:9px;color:var(--wh4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.kv{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;letter-spacing:-.03em;line-height:1;margin-bottom:5px}
+.kv.pos{color:var(--green)}.kv.neg{color:var(--red)}.kv.neu{color:var(--wh)}
+.ks{font-size:10px;color:var(--wh4)}
+
+/* ── CHART CARD ── */
+.chart-card{
+  background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--r2);
+  padding:22px 24px;margin-bottom:20px;position:relative;overflow:hidden;
+}
+.chart-card::before{
+  content:'';position:absolute;top:0;left:0;
+  width:32px;height:32px;
+  border-top:1px solid var(--red);border-left:1px solid var(--red);
+  border-radius:var(--r2) 0 0 0;opacity:.3;
+}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+.card-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--wh3)}
+.card-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--wh4);margin-top:3px}
+.period-tag{
+  font-family:'DM Mono',monospace;font-size:9px;
+  background:var(--red3);border:1px solid var(--red4);
+  color:var(--red);border-radius:20px;padding:3px 10px;
+  white-space:nowrap;
+}
+
+/* ── VIEW PILLS ── */
+.pills{display:flex;gap:5px;margin-bottom:16px;flex-wrap:wrap}
+.pill{
+  font-size:10px;padding:4px 12px;border-radius:20px;
+  border:1px solid var(--bg5);background:transparent;
+  color:var(--wh4);cursor:pointer;transition:all .15s;
+  font-family:'Inter',sans-serif;
+}
+.pill:hover{border-color:var(--wh4);color:var(--wh2)}
+.pill.on{background:var(--red3);border-color:var(--red4);color:var(--wh)}
+
+/* ── TOOLTIP ── */
+#tip{
+  position:fixed;pointer-events:none;
+  background:var(--bg2);border:1px solid var(--bg5);border-radius:var(--r2);
+  padding:9px 13px;font-size:11px;color:var(--wh);
+  opacity:0;transition:opacity .12s;z-index:200;
+  max-width:210px;line-height:1.6;
+  font-family:'DM Mono',monospace;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+#tip strong{font-weight:500;color:var(--wh2);display:block;margin-bottom:2px}
+#tip .tip-val{color:var(--red)}
+
+/* ── LEGEND ── */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--wh4)}
+.ld{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* ── TABLE CARD ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead th{
+  font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--wh4);
+  text-align:right;padding:10px 16px;
+  border-bottom:1px solid var(--bg4);font-weight:400;
+  white-space:nowrap;
+}
+thead th:first-child{text-align:left}
+tbody tr{border-bottom:1px solid var(--bg3);transition:background .1s}
+tbody tr:hover{background:var(--bg3)}
+tbody tr:last-child{border-bottom:none}
+tbody td{
+  padding:9px 16px;font-family:'DM Mono',monospace;font-size:11px;
+  text-align:right;color:var(--wh2);
+}
+tbody td:first-child{
+  font-family:'Inter',sans-serif;font-size:12px;color:var(--wh);
+  text-align:left;
+}
+.td-pos{color:var(--green)}.td-neg{color:var(--red)}.td-neu{color:var(--wh4)}
+.tr-sec td{
+  background:var(--bg3) !important;
+  font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:var(--red) !important;padding:7px 16px;
+}
+.tr-tot td{
+  background:var(--bg3) !important;font-weight:500;
+  color:var(--wh) !important;border-top:1px solid var(--bg5);
+}
+.tr-main td{
+  background:var(--bg4) !important;font-weight:600;
+  font-size:12px !important;border-top:1px solid var(--bg5);
+}
+.tr-muted td{color:var(--wh4) !important;font-size:10px !important}
+.pct-bar{display:flex;align-items:center;gap:6px}
+.bar{height:2px;border-radius:1px;min-width:2px;flex-shrink:0;transition:width .4s ease}
+
+/* ── FOOTER ── */
+.footer{
+  padding:12px 32px;border-top:1px solid var(--bg4);
+  display:flex;justify-content:space-between;align-items:center;
+  font-family:'DM Mono',monospace;font-size:9px;color:var(--wh4);
+}
+.footer-brand{color:var(--red);font-weight:500}
+
+/* ── RESPONSIVE ── */
+@media(max-width:760px){
+  .app{grid-template-columns:1fr}.sidebar{display:none}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .content{padding:16px 18px}
+  .empty-steps{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">NK</div>
+    <span class="brand-name">Nu-Ko Capital</span>
+    <div class="brand-sep"></div>
+    <span class="brand-sub">P&L · Sankey Viewer</span>
+  </div>
+  <div class="topbar-right">
+    <div class="badge-live" id="badge-live">
+      <div class="live-dot" id="live-dot"></div>
+      <span id="badge-text">Sin datos</span>
+    </div>
+    <button class="btn" onclick="document.getElementById('file-input').click()">↑ Importar CSV</button>
+    <button class="btn btn-red" id="btn-export" onclick="window.print()" disabled>↓ Exportar</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="s-label">Navegación</div>
+      <div class="nav-item active" onclick="goPanel(this,'sankey')">
+        <span class="nav-icon">⇄</span> Sankey P&L
+      </div>
+      <div class="nav-item" onclick="goPanel(this,'ebit')">
+        <span class="nav-icon">◈</span> EBIT · Detalle
+      </div>
+    </div>
+
+    <div class="upload-section">
+      <div class="s-label">Fuente de datos</div>
+      <div class="drop-zone" id="drop-zone"
+           onclick="document.getElementById('file-input').click()"
+           ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+        <div class="drop-icon">⬆</div>
+        <div class="drop-title">Importar CSV</div>
+        <div class="drop-sub">Click o arrastra el archivo</div>
+      </div>
+      <div id="file-status" style="display:none;margin-top:8px"></div>
+    </div>
+
+    <div class="sidebar-stats" id="sidebar-stats" style="display:none">
+      <div class="s-label">Resumen</div>
+      <div id="stat-list"></div>
+    </div>
+
+    <div style="flex:1"></div>
+    <div class="sidebar-footer">
+      Formato esperado:<br>
+      EBIT exportado de QuickBooks<br>
+      columnas: Label, Jan, Feb, Mar<br><br>
+      Nu-Ko Capital LLC · 2026
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="content">
+
+      <!-- EMPTY STATE -->
+      <div id="panel-empty" class="empty-state">
+        <div class="empty-icon">◈</div>
+        <div class="empty-title">Importa tu P&L para comenzar</div>
+        <div class="empty-sub">Carga el CSV exportado de QuickBooks y el Sankey se construye automáticamente con tus datos reales.</div>
+        <div class="empty-steps">
+          <div class="step">
+            <div class="step-n">01</div>
+            <div class="step-t">Exporta</div>
+            <div class="step-s">P&L desde QuickBooks como CSV</div>
+          </div>
+          <div class="step">
+            <div class="step-n">02</div>
+            <div class="step-t">Importa</div>
+            <div class="step-s">Arrastra o haz click en "Importar CSV"</div>
+          </div>
+          <div class="step">
+            <div class="step-n">03</div>
+            <div class="step-t">Analiza</div>
+            <div class="step-s">Sankey interactivo generado al instante</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL SANKEY -->
+      <div id="panel-sankey" style="display:none">
+        <div class="kpi-grid" id="kpi-grid"></div>
+        <div class="chart-card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Flujo de ingresos y gastos</div>
+              <div class="card-sub">Datos reales QuickBooks · Accrual Basis</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="period-tag" id="period-tag">—</div>
+            </div>
+          </div>
+          <div class="pills">
+            <button class="pill on" id="p-full"   onclick="setSK('full')">P&L completo</button>
+            <button class="pill"    id="p-income" onclick="setSK('income')">Solo ingresos</button>
+            <button class="pill"    id="p-exp"    onclick="setSK('exp')">Solo gastos</button>
+          </div>
+          <div style="position:relative"><svg id="sk-svg" width="100%" style="display:block"></svg></div>
+          <div class="legend">
+            <div class="leg"><div class="ld" style="background:#1a9068"></div>Ingresos</div>
+            <div class="leg"><div class="ld" style="background:#1a5fa0"></div>Gross profit</div>
+            <div class="leg"><div class="ld" style="background:#c49412"></div>Intereses COGS</div>
+            <div class="leg"><div class="ld" style="background:#b8436e"></div>BPO / Bad Debt</div>
+            <div class="leg"><div class="ld" style="background:#55554f"></div>Otros gastos</div>
+            <div class="leg"><div class="ld" style="background:#6b65c8"></div>Otros ingresos</div>
+            <div class="leg"><div class="ld" style="background:#c8102e"></div>Déficit neto</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL EBIT -->
+      <div id="panel-ebit" style="display:none">
+        <div class="chart-card" style="padding:0;overflow:hidden">
+          <div style="padding:18px 22px;border-bottom:1px solid var(--bg4);display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="card-title">Profit & Loss · Detalle completo</div>
+              <div class="card-sub">Nu-Ko Capital LLC · QuickBooks Accrual Basis</div>
+            </div>
+            <div class="period-tag" id="period-tag2">—</div>
+          </div>
+          <div class="tbl-wrap">
+            <table id="ebit-table">
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th id="th1">Ene</th>
+                  <th id="th2">Feb</th>
+                  <th id="th3">Mar</th>
+                  <th>Total</th>
+                  <th style="text-align:left;padding-left:20px">Distribución</th>
+                </tr>
+              </thead>
+              <tbody id="ebit-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <footer class="footer">
+      <span><span class="footer-brand">Nu-Ko Capital LLC</span> · P&L Sankey Viewer · Standalone App</span>
+      <span id="footer-ts">—</span>
+    </footer>
+  </div>
+</div>
+
+<div id="tip"></div>
+<input type="file" id="file-input" accept=".csv" style="display:none" onchange="loadFile(this)">
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════════════
+let G = { rows:{}, months:[], period:'', loaded:false, skView:'full' };
+
+// ═══════════════════════════════════════════════════════════════════
+// CSV PARSER — maneja comillas, $ y paréntesis para negativos
+// ═══════════════════════════════════════════════════════════════════
+function parseCSV(text) {
+  const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  const result = [];
+  lines.forEach(line => {
+    const cols = [];
+    let cur='', inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){ inQ=!inQ; continue; }
+      if(c===','&&!inQ){ cols.push(cur.trim()); cur=''; continue; }
+      cur+=c;
+    }
+    cols.push(cur.trim());
+    result.push(cols);
+  });
+  return result;
+}
+
+function parseMoney(s) {
+  if(!s||s.trim()==='')return 0;
+  s=s.replace(/[\s"]/g,'').replace(/\$/g,'').replace(/,/g,'');
+  const neg=s.startsWith('(')&&s.endsWith(')');
+  s=s.replace(/[()]/g,'');
+  if(s===''||s==='-'||s==='- ')return 0;
+  const v=parseFloat(s)||0;
+  return neg?-v:v;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// LEER CSV — detecta automáticamente columnas de meses
+// ═══════════════════════════════════════════════════════════════════
+function processCSV(text) {
+  const raw = parseCSV(text);
+  G.rows = {};
+  G.months = [];
+  G.period = '';
+
+  // Detectar fila de encabezados (busca "Jan" o "January")
+  let monthRow = -1, monthCols = [];
+  for(let r=0;r<Math.min(10,raw.length);r++){
+    const row = raw[r];
+    const found = [];
+    row.forEach((c,i)=>{ if(c&&/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i.test(c)) found.push({i,label:c.trim()}); });
+    if(found.length>=1){ monthRow=r; monthCols=found; break; }
+  }
+
+  // Fallback: assume cols 1,2,3 son meses
+  if(monthCols.length===0){
+    monthCols=[{i:1,label:'Enero'},{i:2,label:'Febrero'},{i:3,label:'Marzo'}];
+  }
+
+  G.months = monthCols.map(m=>m.label);
+  G.mCols  = monthCols.map(m=>m.i);
+
+  // Detectar periodo del encabezado
+  for(let r=0;r<Math.min(6,raw.length);r++){
+    const joined=raw[r].join(' ');
+    if(/january|february|march|2026|2025/i.test(joined)&&joined.length<80){
+      G.period=joined.replace(/\s+/g,' ').trim(); break;
+    }
+  }
+
+  // Leer todas las filas de datos
+  for(let r=0;r<raw.length;r++){
+    if(r===monthRow)continue;
+    const row=raw[r];
+    const label=row[0]?row[0].trim().replace(/\s+/g,' '):'';
+    if(!label||label.length>80)continue;
+    const vals=G.mCols.map(ci=>parseMoney(row[ci]||''));
+    if(vals.some(v=>v!==0)){
+      G.rows[label.toLowerCase()]=vals;
+    }
+  }
+}
+
+// Busca la fila más cercana al keyword (tolerante)
+function find(keyword) {
+  const kw=keyword.toLowerCase().trim();
+  // exact
+  if(G.rows[kw])return G.rows[kw];
+  // startsWith
+  const k1=Object.keys(G.rows).find(k=>k.startsWith(kw));
+  if(k1)return G.rows[k1];
+  // includes
+  const k2=Object.keys(G.rows).find(k=>k.includes(kw));
+  if(k2)return G.rows[k2];
+  return G.months.map(()=>0);
+}
+
+function tot(keyword){ return find(keyword).reduce((s,v)=>s+v,0); }
+function r3(v){ return Math.round(v); }
+
+// ═══════════════════════════════════════════════════════════════════
+// FORMAT
+// ═══════════════════════════════════════════════════════════════════
+function fmt(v,short=false){
+  const a=Math.abs(v),s=v<0?'(':'' ,e=v<0?')':'';
+  if(short){
+    if(a>=1e6)return s+'$'+(a/1e6).toFixed(1)+'M'+e;
+    if(a>=1e3)return s+'$'+Math.round(a/1e3)+'K'+e;
+    return s+'$'+Math.round(a)+e;
+  }
+  if(a>=1e6)return s+'$'+(a/1e6).toFixed(2)+'M'+e;
+  if(a>=1e3)return s+'$'+a.toLocaleString('en-US',{maximumFractionDigits:0})+e;
+  return s+'$'+a.toFixed(2)+e;
+}
+function cls(v,inv=false){
+  if(v===0)return 'td-neu';
+  const pos=inv?(v<0):(v>0);
+  return pos?'td-pos':'td-neg';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER KPIs
+// ═══════════════════════════════════════════════════════════════════
+function renderKPIs(){
+  const totalInc = tot('total for income');
+  const cogs     = tot('financial interests');
+  const gp       = tot('gross profit');
+  const totalExp = tot('total for expenses');
+  const netOp    = tot('net operating income');
+  const otherInc = tot('total for other income');
+  const netInc   = tot('net income');
+  const margin   = totalInc!==0?(netInc/totalInc*100):0;
+
+  const cards=[
+    {l:'Ingresos totales', v:fmt(totalInc,true), c:'neu', s:'Total for Income', acc:true},
+    {l:'Gross profit',     v:fmt(gp,true),       c:gp>0?'pos':'neg', s:'Después de COGS'},
+    {l:'Total gastos op.', v:fmt(totalExp,true),  c:'neg', s:'Total for Expenses'},
+    {l:'Net Income',       v:fmt(netInc,true),    c:netInc>=0?'pos':'neg', s:`Margen: ${margin.toFixed(1)}%`},
+  ];
+
+  document.getElementById('kpi-grid').innerHTML=cards.map(c=>`
+    <div class="kpi ${c.acc?'accent':''}">
+      <div class="kl">${c.l}</div>
+      <div class="kv ${c.c}">${c.v}</div>
+      <div class="ks">${c.s}</div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SANKEY
+// ═══════════════════════════════════════════════════════════════════
+const NC={income:'#1a9068',mid:'#1a9068',gp:'#1a5fa0',cogs:'#c49412',
+          expense:'#b8436e',other:'#55554f',extra:'#6b65c8',deficit:'#c8102e'};
+
+function buildSankeyData(view){
+  const totalInc=r3(tot('total for income'));
+  const cogs_v  =r3(tot('financial interests'));
+  const gp_v    =r3(tot('gross profit'));
+  const totalExp=r3(tot('total for expenses'));
+  const netOp   =r3(tot('net operating income'));
+  const otherInc=r3(tot('total for other income'));
+  const netInc  =r3(tot('net income'));
+
+  // ingresos
+  const v_disc    =r3(tot('discount fee'));
+  const v_wire    =r3(tot('wire fee'));
+  const v_cancel  =r3(tot('cancel fee'));
+  const v_pen     =r3(tot('penalties fee'));
+  const v_bdrec   =r3(tot('bad debt recoveries'));
+  const v_otros_in=r3(totalInc-v_disc-v_wire-v_cancel-v_pen-v_bdrec);
+
+  // gastos
+  const v_bpo  =r3(tot('expense bpo'));
+  const v_genbiz=r3(tot('total for general business'));
+  const v_soft =r3(tot('total for software'));
+  const v_labor=r3(tot('contract labor'));
+  const v_legal=r3(tot('legal & professional'));
+  const v_otros_exp=Math.max(0,r3(totalExp-v_bpo-v_genbiz-v_soft-v_labor-v_legal));
+
+  // Para el Sankey: el GP se distribuye proporcionalmente entre los gastos
+  function pr(exp){ return Math.max(0,Math.round(Math.abs(gp_v)*exp/Math.abs(totalExp))); }
+  const deficit_from_gp=Math.abs(r3(netOp));
+  const deficit_total  =Math.abs(r3(netInc));
+  const oi_v=r3(otherInc);
+
+  if(view==='full') return {
+    nodes:[
+      {id:'disc',   label:'Discount fee',     g:'income'},
+      {id:'wire',   label:'Wire fee',          g:'income'},
+      {id:'cancel', label:'Cancel fee',        g:'income'},
+      {id:'pen',    label:'Penalties fee',     g:'income'},
+      {id:'bdrec',  label:'Bad Debt Rec.',     g:'income'},
+      {id:'oin',    label:'Otros fees',        g:'income'},
+      {id:'rev',    label:'Ingresos\nbrutos',  g:'mid'},
+      {id:'cogs',   label:'Intereses\n(COGS)', g:'cogs'},
+      {id:'gp',     label:'Gross\nProfit',     g:'gp'},
+      {id:'bpo',    label:'Expense BPO',       g:'expense'},
+      {id:'bd',     label:'Bad Debt\n& Gen Biz',g:'expense'},
+      {id:'soft',   label:'Software\n& Apps',  g:'other'},
+      {id:'labor',  label:'Contract\nLabor',   g:'other'},
+      {id:'legal',  label:'Legal &\nProf.',    g:'other'},
+      {id:'oexp',   label:'Otros\ngastos',     g:'other'},
+      {id:'oi',     label:'Otros\ningresos',   g:'extra'},
+      {id:'def',    label:'Déficit\nneto',     g:'deficit'},
+    ],
+    links:[
+      {s:'disc',  t:'rev',  v:v_disc},
+      {s:'wire',  t:'rev',  v:v_wire},
+      {s:'cancel',t:'rev',  v:v_cancel},
+      {s:'pen',   t:'rev',  v:v_pen},
+      {s:'bdrec', t:'rev',  v:v_bdrec},
+      {s:'oin',   t:'rev',  v:v_otros_in},
+      {s:'rev',   t:'cogs', v:cogs_v},
+      {s:'rev',   t:'gp',   v:Math.abs(gp_v)},
+      {s:'gp',    t:'bpo',  v:pr(v_bpo)},
+      {s:'gp',    t:'bd',   v:pr(v_genbiz)},
+      {s:'gp',    t:'soft', v:pr(v_soft)},
+      {s:'gp',    t:'labor',v:pr(v_labor)},
+      {s:'gp',    t:'legal',v:pr(v_legal)},
+      {s:'gp',    t:'oexp', v:pr(v_otros_exp)},
+      {s:'gp',    t:'def',  v:deficit_from_gp},
+      {s:'oi',    t:'def',  v:oi_v},
+    ].filter(l=>l.v>0)
+  };
+
+  if(view==='income') return {
+    nodes:[
+      {id:'disc',   label:'Discount fee',      g:'income'},
+      {id:'wire',   label:'Wire fee',           g:'income'},
+      {id:'cancel', label:'Cancel fee',         g:'income'},
+      {id:'pen',    label:'Penalties fee',      g:'income'},
+      {id:'bdrec',  label:'Bad Debt Rec.',      g:'income'},
+      {id:'oin',    label:'Otros fees',         g:'income'},
+      {id:'rev',    label:'Ingresos\nbrutos',   g:'mid'},
+      {id:'cogs',   label:'Intereses\n(COGS)',  g:'cogs'},
+      {id:'gp',     label:'Gross\nProfit',      g:'gp'},
+    ],
+    links:[
+      {s:'disc',  t:'rev', v:v_disc},
+      {s:'wire',  t:'rev', v:v_wire},
+      {s:'cancel',t:'rev', v:v_cancel},
+      {s:'pen',   t:'rev', v:v_pen},
+      {s:'bdrec', t:'rev', v:v_bdrec},
+      {s:'oin',   t:'rev', v:v_otros_in},
+      {s:'rev',   t:'cogs',v:cogs_v},
+      {s:'rev',   t:'gp',  v:Math.abs(gp_v)},
+    ].filter(l=>l.v>0)
+  };
+
+  return {
+    nodes:[
+      {id:'gp',   label:'Gross Profit',      g:'gp'},
+      {id:'bpo',  label:'Expense BPO',        g:'expense'},
+      {id:'bd',   label:'Bad Debt & Gen Biz', g:'expense'},
+      {id:'soft', label:'Software & Apps',    g:'other'},
+      {id:'labor',label:'Contract Labor',     g:'other'},
+      {id:'legal',label:'Legal & Prof.',      g:'other'},
+      {id:'oexp', label:'Otros gastos',       g:'other'},
+      {id:'oi',   label:'Otros ingresos',     g:'extra'},
+      {id:'def',  label:'Déficit neto',       g:'deficit'},
+    ],
+    links:[
+      {s:'gp',  t:'bpo',  v:pr(v_bpo)},
+      {s:'gp',  t:'bd',   v:pr(v_genbiz)},
+      {s:'gp',  t:'soft', v:pr(v_soft)},
+      {s:'gp',  t:'labor',v:pr(v_labor)},
+      {s:'gp',  t:'legal',v:pr(v_legal)},
+      {s:'gp',  t:'oexp', v:pr(v_otros_exp)},
+      {s:'gp',  t:'def',  v:deficit_from_gp},
+      {s:'oi',  t:'def',  v:oi_v},
+    ].filter(l=>l.v>0)
+  };
+}
+
+function drawSankey(view){
+  const data=buildSankeyData(view);
+  const svg=d3.select('#sk-svg');
+  svg.selectAll('*').remove();
+  const W=svg.node().parentElement.clientWidth||680;
+  const H=view==='full'?540:300;
+  svg.attr('viewBox',`0 0 ${W} ${H}`).attr('height',H);
+
+  const gen=d3.sankey()
+    .nodeId(n=>n.id).nodeWidth(12)
+    .nodePadding(view==='full'?7:12)
+    .extent([[16,16],[W-16,H-20]]);
+
+  const {nodes,links}=gen({
+    nodes:data.nodes.map(n=>({...n})),
+    links:data.links.map(l=>({source:l.s,target:l.t,value:l.v}))
+  });
+
+  const nm=Object.fromEntries(data.nodes.map(n=>[n.id,n]));
+  const tip=document.getElementById('tip');
+
+  // links
+  svg.append('g').attr('fill','none')
+    .selectAll('path').data(links).join('path')
+    .attr('d',d3.sankeyLinkHorizontal())
+    .attr('stroke',l=>NC[(nm[l.source.id]||{}).g]||'#555')
+    .attr('stroke-width',l=>Math.max(1,l.width))
+    .attr('opacity',.2)
+    .on('mouseover',function(e,l){
+      d3.select(this).attr('opacity',.55);
+      tip.style.opacity=1;
+      const sl=(l.source.label||'').replace(/\n/g,' ');
+      const tl=(l.target.label||'').replace(/\n/g,' ');
+      tip.innerHTML=`<strong>${sl} → ${tl}</strong><span class="tip-val">${fmt(l.value)}</span>`;
+    })
+    .on('mousemove',e=>{tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-42)+'px'})
+    .on('mouseout',function(){d3.select(this).attr('opacity',.2);tip.style.opacity=0});
+
+  // nodes
+  const ng=svg.append('g');
+  const node=ng.selectAll('g').data(nodes).join('g');
+
+  node.append('rect')
+    .attr('x',n=>n.x0).attr('y',n=>n.y0)
+    .attr('width',n=>n.x1-n.x0).attr('height',n=>Math.max(1,n.y1-n.y0))
+    .attr('fill',n=>NC[(nm[n.id]||{}).g]||'#555').attr('rx',2)
+    .on('mouseover',function(e,n){
+      const inV=links.filter(l=>l.target.id===n.id).reduce((s,l)=>s+l.value,0);
+      const outV=links.filter(l=>l.source.id===n.id).reduce((s,l)=>s+l.value,0);
+      tip.style.opacity=1;
+      const lbl=(n.label||n.id).replace(/\n/g,' ');
+      tip.innerHTML=`<strong>${lbl}</strong>${inV?'Entrada: <span class="tip-val">'+fmt(inV)+'</span><br>':''}${outV?'Salida: <span class="tip-val">'+fmt(outV)+'</span>':''}`;
+    })
+    .on('mousemove',e=>{tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-42)+'px'})
+    .on('mouseout',()=>tip.style.opacity=0);
+
+  const fs=view==='full'?9:10;
+  // labels externos
+  node.append('text')
+    .attr('x',n=>n.x0<W/2?n.x1+6:n.x0-6)
+    .attr('y',n=>(n.y0+n.y1)/2)
+    .attr('text-anchor',n=>n.x0<W/2?'start':'end')
+    .attr('dominant-baseline','middle')
+    .attr('font-size',fs).attr('fill','#888882')
+    .attr('font-family','DM Mono, monospace')
+    .each(function(n){
+      const el=d3.select(this);
+      const lines=(n.label||n.id).split('\n');
+      if(lines.length===1){el.text(lines[0]);}
+      else lines.forEach((ln,i)=>el.append('tspan')
+        .attr('x',n.x0<W/2?n.x1+6:n.x0-6)
+        .attr('dy',i===0?'-0.45em':'1.1em').text(ln));
+    });
+
+  // value labels dentro del nodo
+  node.filter(n=>n.y1-n.y0>22).append('text')
+    .attr('x',n=>(n.x0+n.x1)/2).attr('y',n=>(n.y0+n.y1)/2)
+    .attr('text-anchor','middle').attr('dominant-baseline','middle')
+    .attr('font-size',8).attr('fill','rgba(255,255,255,.65)').attr('pointer-events','none')
+    .attr('font-family','DM Mono, monospace')
+    .text(n=>{
+      const inV=links.filter(l=>l.target.id===n.id).reduce((s,l)=>s+l.value,0);
+      const outV=links.filter(l=>l.source.id===n.id).reduce((s,l)=>s+l.value,0);
+      return fmt(Math.max(inV,outV),true);
+    });
+}
+
+function setSK(v){
+  G.skView=v;
+  ['full','income','exp'].forEach(k=>document.getElementById('p-'+k).classList.toggle('on',k===v));
+  drawSankey(v);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER TABLA EBIT
+// ═══════════════════════════════════════════════════════════════════
+function renderEBIT(){
+  const nm=G.months;
+  document.getElementById('th1').textContent=nm[0]||'Ene';
+  document.getElementById('th2').textContent=nm[1]||'Feb';
+  document.getElementById('th3').textContent=nm[2]||'Mar';
+
+  const totalInc=r3(tot('total for income'));
+  const totalExp=r3(tot('total for expenses'));
+  const maxAbs=Math.max(Math.abs(totalInc),Math.abs(totalExp));
+
+  function secRow(label){ return`<tr class="tr-sec"><td colspan="6">${label.toUpperCase()}</td></tr>`; }
+
+  function dataRow(label,vals,indent=false,isIncome=false){
+    const total=r3(vals.reduce((s,v)=>s+v,0));
+    const pct=maxAbs>0?Math.abs(total)/maxAbs*100:0;
+    const c=total>=0?'td-pos':'td-neg';
+    const barColor=isIncome?'#1a9068':total<0?'#c8102e':'#55554f';
+    const pad=indent?'padding-left:28px':'padding-left:20px';
+    return`<tr>
+      <td style="${pad}">${label}</td>
+      ${vals.map(v=>`<td class="${cls(v,isIncome)}">${fmt(v)}</td>`).join('')}
+      <td class="${c}">${fmt(total)}</td>
+      <td><div class="pct-bar" style="padding-left:4px">
+        <div class="bar" style="width:${Math.round(Math.min(pct,100))}px;background:${barColor}"></div>
+        <span style="font-size:9px;color:var(--wh4)">${pct.toFixed(0)}%</span>
+      </div></td>
+    </tr>`;
+  }
+
+  function totRow(label,keyword,big=false){
+    const vals=find(keyword);
+    const total=r3(vals.reduce((s,v)=>s+v,0));
+    const c=total>=0?'td-pos':'td-neg';
+    const cls2=big?'tr-main':'tr-tot';
+    return`<tr class="${cls2}">
+      <td>${label}</td>
+      ${vals.map(v=>`<td class="${cls(v)}">${fmt(v)}</td>`).join('')}
+      <td class="${c}">${fmt(total)}</td>
+      <td></td>
+    </tr>`;
+  }
+
+  // Líneas de ingreso
+  const incomeKeys=[
+    ['Discount fee','discount fee'],['Wire fee','wire fee'],['Cancel fee','cancel fee'],
+    ['Penalties fee','penalties fee'],['Bad Debt Recoveries','bad debt recoveries'],
+    ['ACH fee','ach fee'],['Schedule fee','schedule fee'],['Fuel Advance fee','fuel advance fee'],
+    ['Transflo fee','transflo fee'],['Comdata Funding','comdata funding'],
+    ['Transfer fee','transfer fee'],['Under fee','under fee'],
+    ['LoadConnex fee','loadconnex fee'],['Mailing fee','mailing fee'],
+  ];
+
+  const expKeys=[
+    ['Expense BPO','expense bpo'],['Bad Debt','bad debt'],
+    ['Total General Business','total for general business'],
+    ['Total Software & Apps','total for software'],
+    ['Contract Labor','contract labor'],
+    ['Legal & Professional','legal & professional'],
+    ['Total Bank Charges','total for bank charges'],
+    ['Total Commissions','total for commissions'],
+    ['Insurance','insurance'],['Taxes paid','taxes paid'],
+  ];
+
+  const otherKeys=[
+    ['LX Rebate','lx rebate'],['Referrals','referrals'],['Other income','other income'],
+  ];
+
+  let html='';
+  html+=secRow('Ingresos operativos');
+  incomeKeys.forEach(([l,k])=>{ const v=find(k); if(v.some(x=>x!==0)) html+=dataRow(l,v,true,true); });
+  html+=totRow('Total ingresos','total for income');
+  html+=totRow('Financial Interests (COGS)','financial interests');
+  html+=totRow('Gross Profit','gross profit',true);
+
+  html+=secRow('Gastos operativos');
+  expKeys.forEach(([l,k])=>{ const v=find(k); if(v.some(x=>x!==0)) html+=dataRow(l,v,true,false); });
+  html+=totRow('Total gastos operativos','total for expenses');
+  html+=totRow('Utilidad operativa neta','net operating income',true);
+
+  html+=secRow('Otros ingresos');
+  otherKeys.forEach(([l,k])=>{ const v=find(k); if(v.some(x=>x!==0)) html+=dataRow(l,v,true,true); });
+  html+=totRow('Total otros ingresos','total for other income');
+
+  html+=totRow('NET INCOME','net income',true);
+
+  // Márgenes
+  const incVals=find('total for income');
+  const netVals=find('net income');
+  const gpVals=find('gross profit');
+  function marginRow(label,numVals){
+    const cells=numVals.map((v,i)=>{
+      const inc=incVals[i];const m=inc!==0?(v/inc*100):0;
+      return`<td class="${m>=0?'td-pos':'td-neg'}">${m.toFixed(1)}%</td>`;
+    }).join('');
+    const totInc=incVals.reduce((s,v)=>s+v,0);
+    const totNum=numVals.reduce((s,v)=>s+v,0);
+    const tm=totInc!==0?(totNum/totInc*100):0;
+    return`<tr class="tr-muted"><td style="padding-left:20px">${label}</td>${cells}<td class="${tm>=0?'td-pos':'td-neg'}">${tm.toFixed(1)}%</td><td></td></tr>`;
+  }
+  html+=marginRow('Margen bruto (%)',gpVals);
+  html+=marginRow('Margen neto (%)',netVals);
+
+  document.getElementById('ebit-body').innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SIDEBAR STATS
+// ═══════════════════════════════════════════════════════════════════
+function renderSidebar(){
+  const items=[
+    {l:'Ingresos',  v:fmt(tot('total for income'),true),   c:'neu'},
+    {l:'Gross P.',  v:fmt(tot('gross profit'),true),        c:'pos'},
+    {l:'Gastos',    v:fmt(tot('total for expenses'),true),  c:'neg'},
+    {l:'Net Inc.',  v:fmt(tot('net income'),true),          c:'neg'},
+    {l:'Discount%', v:(tot('discount fee')/tot('total for income')*100).toFixed(0)+'%', c:'neu'},
+    {l:'BPO%',      v:(tot('expense bpo')/tot('total for expenses')*100).toFixed(0)+'%',c:'neg'},
+  ];
+  document.getElementById('stat-list').innerHTML=items.map(i=>
+    `<div class="stat-item"><span class="stat-label">${i.l}</span><span class="stat-val ${i.c}">${i.v}</span></div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PANEL NAVIGATION
+// ═══════════════════════════════════════════════════════════════════
+function goPanel(el,panel){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  ['sankey','ebit'].forEach(p=>{
+    document.getElementById('panel-'+p).style.display=p===panel?'block':'none';
+  });
+  if(panel==='ebit'&&G.loaded) renderEBIT();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER ALL — punto de entrada tras cargar datos
+// ═══════════════════════════════════════════════════════════════════
+function renderAll(){
+  document.getElementById('panel-empty').style.display='none';
+  document.getElementById('panel-sankey').style.display='block';
+  document.getElementById('panel-ebit').style.display='none';
+
+  const tag=G.period||G.months.join(' · ');
+  document.getElementById('period-tag').textContent=tag;
+  document.getElementById('period-tag2').textContent=tag;
+  document.getElementById('footer-ts').textContent=
+    'Datos cargados: '+new Date().toLocaleString('es-CO');
+
+  renderKPIs();
+  drawSankey('full');
+  renderSidebar();
+
+  document.getElementById('sidebar-stats').style.display='block';
+  document.getElementById('badge-live').classList.add('active');
+  document.getElementById('live-dot').classList.add('on');
+  document.getElementById('badge-text').textContent='Datos cargados';
+  document.getElementById('btn-export').disabled=false;
+  G.loaded=true;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FILE HANDLING
+// ═══════════════════════════════════════════════════════════════════
+function loadFile(input){
+  const file=input.files[0];
+  if(!file)return;
+  showFileStatus(file.name);
+  const reader=new FileReader();
+  reader.onload=e=>{ processCSV(e.target.result); renderAll(); };
+  reader.readAsText(file);
+  input.value='';
+}
+
+function showFileStatus(name){
+  const dz=document.getElementById('drop-zone');
+  dz.style.display='none';
+  const fs=document.getElementById('file-status');
+  fs.style.display='block';
+  fs.innerHTML=`<div class="file-loaded">
+    <span class="file-name">📄 ${name}</span>
+    <span class="file-clear" onclick="clearFile()" title="Quitar">✕</span>
+  </div>`;
+}
+
+function clearFile(){
+  document.getElementById('drop-zone').style.display='block';
+  document.getElementById('file-status').style.display='none';
+  document.getElementById('sidebar-stats').style.display='none';
+  document.getElementById('panel-empty').style.display='flex';
+  document.getElementById('panel-sankey').style.display='none';
+  document.getElementById('panel-ebit').style.display='none';
+  document.getElementById('badge-live').classList.remove('active');
+  document.getElementById('live-dot').classList.remove('on');
+  document.getElementById('badge-text').textContent='Sin datos';
+  document.getElementById('btn-export').disabled=true;
+  G={rows:{},months:[],period:'',loaded:false,skView:'full'};
+}
+
+function dragOver(e){ e.preventDefault(); document.getElementById('drop-zone').classList.add('drag'); }
+function dragLeave(e){ document.getElementById('drop-zone').classList.remove('drag'); }
+function dropFile(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const file=e.dataTransfer.files[0];
+  if(!file||!file.name.endsWith('.csv'))return;
+  showFileStatus(file.name);
+  const reader=new FileReader();
+  reader.onload=ev=>{ processCSV(ev.target.result); renderAll(); };
+  reader.readAsText(file);
+}
+
+// resize
+window.addEventListener('resize',()=>{ if(G.loaded) drawSankey(G.skView); });
+</script>
+</body>
+</html>
