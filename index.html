@@ -4,776 +4,622 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Nu-Ko Capital · P&L Sankey</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-sankey/0.12.3/d3-sankey.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap');
-
-*{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#080808;
-  --bg2:#0f0f0f;
-  --bg3:#161616;
-  --bg4:#1e1e1e;
-  --bg5:#272727;
-  --red:#c8102e;
-  --red2:#a50d25;
-  --red3:rgba(200,16,46,.1);
-  --red4:rgba(200,16,46,.22);
-  --wh:#f2f2ee;
-  --wh2:#c8c8c2;
-  --wh3:#888882;
-  --wh4:#4a4a47;
-  --green:#1a9068;
-  --green2:rgba(26,144,104,.15);
-  --amber:#c49412;
-  --blue:#1a5fa0;
-  --r:5px;--r2:8px;--r3:12px;
+  --bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;--bg4:#242424;--bg5:#303030;
+  --red:#c8102e;--red2:#9e0d24;--red3:rgba(200,16,46,.10);--redb:rgba(200,16,46,.28);
+  --wh:#f5f5f0;--wh2:#d0d0c8;--wh3:#999;--wh4:#555;
+  --green:#1d9e75;--amber:#d4a017;
+  --sans:'Inter',system-ui,sans-serif;--mono:'DM Mono',monospace;
 }
-html,body{background:var(--bg);color:var(--wh);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
-::selection{background:var(--red);color:#fff}
-::-webkit-scrollbar{width:3px}
-::-webkit-scrollbar-thumb{background:var(--bg5)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;background:var(--bg);color:var(--wh);font-family:var(--sans)}
+body{min-height:100vh}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
 
-/* ── TOPBAR ── */
-.topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 32px;height:52px;
-  border-bottom:1px solid var(--bg4);
-  background:var(--bg2);
-  position:sticky;top:0;z-index:50;
-}
-.brand{display:flex;align-items:center;gap:10px}
-.brand-mark{
-  width:28px;height:28px;background:var(--red);border-radius:4px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:11px;font-weight:600;color:#fff;letter-spacing:-.02em;
-  flex-shrink:0;
-}
-.brand-name{font-size:13px;font-weight:500;color:var(--wh);letter-spacing:-.01em}
-.brand-sep{width:1px;height:16px;background:var(--bg5);margin:0 4px}
-.brand-sub{font-size:11px;color:var(--wh4);font-family:'DM Mono',monospace}
-.topbar-right{display:flex;align-items:center;gap:8px}
-.badge-live{
-  display:flex;align-items:center;gap:5px;
-  font-size:10px;font-family:'DM Mono',monospace;color:var(--wh4);
-  background:var(--bg4);border:1px solid var(--bg5);
-  border-radius:20px;padding:3px 10px;
-}
-.badge-live.active{color:var(--green);border-color:rgba(26,144,104,.3);background:rgba(26,144,104,.08)}
-.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.live-dot.on{animation:blink 1.8s ease infinite}
-.btn{
-  font-family:'Inter',sans-serif;font-size:11px;font-weight:500;
-  padding:6px 14px;border-radius:var(--r);cursor:pointer;transition:all .15s;
-  border:1px solid var(--bg5);background:var(--bg4);color:var(--wh2);
-}
-.btn:hover{background:var(--bg5);color:var(--wh)}
+.shell{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:var(--bg2);border-right:1px solid var(--bg4);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:24px 20px 20px;border-bottom:1px solid var(--bg4)}
+.brand-mark{display:flex;align-items:center;gap:9px;margin-bottom:2px}
+.brand-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:glow 2.4s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 4px var(--red)}50%{box-shadow:0 0 14px var(--red),0 0 22px rgba(200,16,46,.3)}}
+.brand-name{font-size:15px;font-weight:600;letter-spacing:-.02em}
+.brand-sub{font-family:var(--mono);font-size:9px;color:var(--wh4);letter-spacing:.12em;text-transform:uppercase;padding-left:16px}
+.period{margin:14px 0 0;background:var(--bg4);border-radius:4px;padding:6px 10px;font-family:var(--mono);font-size:9px;color:var(--wh4);display:flex;justify-content:space-between}
+.period .val{color:var(--red);font-weight:500}
+
+/* UPLOAD */
+.upload-zone{margin:14px 14px 0;border:1.5px dashed var(--bg5);border-radius:6px;padding:16px 10px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--red);background:var(--red3)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.up-icon{font-size:22px;color:var(--wh4);margin-bottom:6px}
+.up-label{font-size:10px;color:var(--wh4);line-height:1.5}
+.up-label strong{color:var(--red);display:block;font-size:9px;margin-top:3px;letter-spacing:.04em}
+.up-status{margin:7px 14px 0;font-family:var(--mono);font-size:9px;padding:5px 8px;border-radius:4px;display:none;line-height:1.4;word-break:break-word}
+.up-status.ok{background:rgba(29,158,117,.12);color:#2ec89a;border:1px solid rgba(29,158,117,.2);display:block}
+.up-status.err{background:var(--red3);color:var(--red);border:1px solid var(--redb);display:block}
+
+nav{flex:1;padding:14px 8px}
+.nav-sec{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--wh4);padding:0 10px;margin:12px 0 4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:500;color:var(--wh4);border:1px solid transparent;transition:all .15s;margin-bottom:1px}
+.nav-item:hover{background:var(--bg4);color:var(--wh2)}
+.nav-item.active{background:var(--red3);border-color:var(--redb);color:var(--wh)}
+.nav-item.active .ni{color:var(--red)}
+.ni{font-size:13px;width:14px;text-align:center;opacity:.7}
+.nav-item.active .ni{opacity:1}
+
+.sidebar-foot{padding:14px 20px;border-top:1px solid var(--bg4)}
+.health-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--wh4);margin-bottom:5px}
+.health-row .hv{color:var(--red)}
+.health-track{height:2px;background:var(--bg4);border-radius:1px;overflow:hidden}
+.health-fill{height:100%;border-radius:1px;transition:width 1s ease}
+
+/* MAIN */
+.main{display:flex;flex-direction:column;overflow-y:auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid var(--bg4);background:var(--bg);position:sticky;top:0;z-index:20}
+.tb-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--wh2)}
+.tb-right{display:flex;align-items:center;gap:10px}
+.live-badge{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--wh4)}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--red);opacity:0}
+.live-dot.on{opacity:1;animation:glow 1.5s infinite}
+.btn{border:1px solid var(--bg5);background:var(--bg4);color:var(--wh2);border-radius:5px;padding:6px 14px;font-size:11px;font-family:var(--sans);font-weight:600;cursor:pointer;transition:background .15s}
+.btn:hover{background:var(--bg5)}
 .btn-red{background:var(--red);border-color:var(--red);color:#fff}
 .btn-red:hover{background:var(--red2)}
-.btn-red:disabled{opacity:.4;cursor:default}
 
-/* ── LAYOUT ── */
-.app{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 52px)}
+.content{padding:24px 28px;flex:1}
+.panel{display:none}.panel.active{display:block}
 
-/* ── SIDEBAR ── */
-.sidebar{
-  background:var(--bg2);border-right:1px solid var(--bg4);
-  display:flex;flex-direction:column;
-  position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;
-}
-.sidebar-section{padding:20px 16px 0}
-.s-label{
-  font-size:9px;font-family:'DM Mono',monospace;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--wh4);
-  margin-bottom:8px;padding:0 4px;
-}
-.nav-item{
-  display:flex;align-items:center;gap:8px;padding:8px 10px;
-  border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:400;
-  color:var(--wh3);border:1px solid transparent;transition:all .15s;margin-bottom:2px;
-}
-.nav-item:hover{background:var(--bg4);color:var(--wh2)}
-.nav-item.active{background:var(--red3);border-color:var(--red4);color:var(--wh)}
-.nav-icon{font-size:14px;width:14px;text-align:center;opacity:.6;flex-shrink:0}
-.nav-item.active .nav-icon{opacity:1;color:var(--red)}
+/* EMPTY */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 40px;text-align:center;gap:14px}
+.empty-icon{font-size:36px;color:var(--bg5)}
+.empty-title{font-size:15px;font-weight:500;color:var(--wh3)}
+.empty-sub{font-size:12px;color:var(--wh4);line-height:1.6;max-width:320px}
+.empty-btn{background:var(--red);border:none;color:#fff;border-radius:5px;padding:9px 22px;font-size:12px;font-weight:600;font-family:var(--sans);cursor:pointer}
+.empty-btn:hover{background:var(--red2)}
 
-/* ── UPLOAD ZONE ── */
-.upload-section{padding:20px 16px}
-.drop-zone{
-  border:1px dashed var(--bg5);border-radius:var(--r2);
-  padding:20px 16px;text-align:center;cursor:pointer;
-  transition:all .2s;background:var(--bg3);
-}
-.drop-zone:hover,.drop-zone.drag{border-color:var(--red);background:var(--red3)}
-.drop-icon{font-size:22px;margin-bottom:8px;color:var(--wh4)}
-.drop-zone.drag .drop-icon{color:var(--red)}
-.drop-title{font-size:12px;font-weight:500;color:var(--wh2);margin-bottom:3px}
-.drop-sub{font-size:10px;color:var(--wh4);font-family:'DM Mono',monospace}
-.file-loaded{
-  display:flex;align-items:center;gap:8px;
-  background:rgba(26,144,104,.08);border:1px solid rgba(26,144,104,.2);
-  border-radius:var(--r);padding:8px 10px;
-}
-.file-name{font-size:11px;font-family:'DM Mono',monospace;color:var(--green);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.file-clear{font-size:16px;color:var(--wh4);cursor:pointer;transition:color .15s;flex-shrink:0}
-.file-clear:hover{color:var(--red)}
+/* SEC */
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.sec-lbl{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--wh4);white-space:nowrap}
+.sec-line{flex:1;height:1px;background:var(--bg4)}
 
-/* ── SIDEBAR STATS ── */
-.sidebar-stats{padding:0 16px 20px;flex:1}
-.stat-item{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:7px 0;border-bottom:1px solid var(--bg4);
-  font-size:11px;
-}
-.stat-item:last-child{border-bottom:none}
-.stat-label{color:var(--wh4);font-family:'DM Mono',monospace}
-.stat-val{font-family:'DM Mono',monospace;font-weight:500}
-.stat-val.pos{color:var(--green)}.stat-val.neg{color:var(--red)}.stat-val.neu{color:var(--wh2)}
-.sidebar-footer{
-  padding:14px 16px;border-top:1px solid var(--bg4);
-  font-size:9px;font-family:'DM Mono',monospace;color:var(--wh4);line-height:1.8;
-}
-
-/* ── MAIN ── */
-.main{display:flex;flex-direction:column;overflow:hidden}
-.content{padding:28px 32px;flex:1}
-
-/* ── EMPTY STATE ── */
-.empty-state{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  min-height:420px;gap:16px;
-}
-.empty-icon{font-size:40px;color:var(--bg5)}
-.empty-title{font-size:18px;font-weight:500;color:var(--wh2)}
-.empty-sub{font-size:13px;color:var(--wh4);text-align:center;max-width:320px;line-height:1.6}
-.empty-steps{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
-  width:100%;max-width:480px;margin-top:8px;
-}
-.step{background:var(--bg3);border:1px solid var(--bg4);border-radius:var(--r2);padding:14px;text-align:center}
-.step-n{font-size:10px;font-family:'DM Mono',monospace;color:var(--red);margin-bottom:6px}
-.step-t{font-size:12px;font-weight:500;color:var(--wh2);margin-bottom:3px}
-.step-s{font-size:10px;color:var(--wh4)}
-
-/* ── KPI GRID ── */
-.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--bg4);border:1px solid var(--bg4);border-radius:var(--r2);overflow:hidden;margin-bottom:24px}
-.kpi{background:var(--bg2);padding:16px 18px 14px;transition:background .15s;position:relative}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--bg4);border:1px solid var(--bg4);border-radius:8px;overflow:hidden;margin-bottom:24px}
+.kpi{background:var(--bg2);padding:16px 18px 14px;position:relative;transition:background .15s}
 .kpi:hover{background:var(--bg3)}
-.kpi.accent::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}
-.kl{font-family:'DM Mono',monospace;font-size:9px;color:var(--wh4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
-.kv{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;letter-spacing:-.03em;line-height:1;margin-bottom:5px}
+.kpi.accent::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}
+.kl{font-family:var(--mono);font-size:10px;color:var(--wh4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+.kv{font-family:var(--mono);font-size:20px;font-weight:500;letter-spacing:-.03em;line-height:1;margin-bottom:5px}
 .kv.pos{color:var(--green)}.kv.neg{color:var(--red)}.kv.neu{color:var(--wh)}
-.ks{font-size:10px;color:var(--wh4)}
+.ks{font-family:var(--mono);font-size:10px;color:var(--wh4)}
 
-/* ── CHART CARD ── */
-.chart-card{
-  background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--r2);
-  padding:22px 24px;margin-bottom:20px;position:relative;overflow:hidden;
-}
-.chart-card::before{
-  content:'';position:absolute;top:0;left:0;
-  width:32px;height:32px;
-  border-top:1px solid var(--red);border-left:1px solid var(--red);
-  border-radius:var(--r2) 0 0 0;opacity:.3;
-}
-.card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
-.card-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--wh3)}
-.card-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--wh4);margin-top:3px}
-.period-tag{
-  font-family:'DM Mono',monospace;font-size:9px;
-  background:var(--red3);border:1px solid var(--red4);
-  color:var(--red);border-radius:20px;padding:3px 10px;
-  white-space:nowrap;
-}
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--bg4);border-radius:8px;padding:22px;margin-bottom:22px;position:relative;overflow:hidden}
+.card-corner::after{content:'';position:absolute;top:0;left:0;width:32px;height:32px;border-top:1px solid var(--red);border-left:1px solid var(--red);border-radius:8px 0 0 0;opacity:.35}
+.card-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--wh3);margin-bottom:3px}
+.card-sub{font-family:var(--mono);font-size:10px;color:var(--wh4);margin-bottom:14px}
 
-/* ── VIEW PILLS ── */
-.pills{display:flex;gap:5px;margin-bottom:16px;flex-wrap:wrap}
-.pill{
-  font-size:10px;padding:4px 12px;border-radius:20px;
-  border:1px solid var(--bg5);background:transparent;
-  color:var(--wh4);cursor:pointer;transition:all .15s;
-  font-family:'Inter',sans-serif;
-}
+/* PILLS */
+.pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+.pill{font-size:10px;padding:4px 12px;border-radius:20px;border:1px solid var(--bg5);background:transparent;color:var(--wh4);cursor:pointer;font-family:var(--sans);transition:all .15s}
 .pill:hover{border-color:var(--wh4);color:var(--wh2)}
-.pill.on{background:var(--red3);border-color:var(--red4);color:var(--wh)}
+.pill.on{background:var(--red3);border-color:var(--redb);color:var(--wh)}
 
-/* ── TOOLTIP ── */
-#tip{
-  position:fixed;pointer-events:none;
-  background:var(--bg2);border:1px solid var(--bg5);border-radius:var(--r2);
-  padding:9px 13px;font-size:11px;color:var(--wh);
-  opacity:0;transition:opacity .12s;z-index:200;
-  max-width:210px;line-height:1.6;
-  font-family:'DM Mono',monospace;
-  box-shadow:0 8px 24px rgba(0,0,0,.4);
-}
-#tip strong{font-weight:500;color:var(--wh2);display:block;margin-bottom:2px}
-#tip .tip-val{color:var(--red)}
+/* TIP */
+#tip{position:fixed;pointer-events:none;background:var(--bg2);border:1px solid var(--bg5);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--wh);opacity:0;transition:opacity .15s;z-index:100;max-width:210px;line-height:1.6}
 
-/* ── LEGEND ── */
+/* LEGEND */
 .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
-.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--wh4)}
+.leg{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--wh3)}
 .ld{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 
-/* ── TABLE CARD ── */
+/* TABLE */
 .tbl-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:11px}
-thead th{
-  font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--wh4);
-  text-align:right;padding:10px 16px;
-  border-bottom:1px solid var(--bg4);font-weight:400;
-  white-space:nowrap;
-}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--wh4);text-align:right;padding:9px 16px;border-bottom:1px solid var(--bg4);font-weight:400}
 thead th:first-child{text-align:left}
 tbody tr{border-bottom:1px solid var(--bg3);transition:background .1s}
 tbody tr:hover{background:var(--bg3)}
 tbody tr:last-child{border-bottom:none}
-tbody td{
-  padding:9px 16px;font-family:'DM Mono',monospace;font-size:11px;
-  text-align:right;color:var(--wh2);
-}
-tbody td:first-child{
-  font-family:'Inter',sans-serif;font-size:12px;color:var(--wh);
-  text-align:left;
-}
-.td-pos{color:var(--green)}.td-neg{color:var(--red)}.td-neu{color:var(--wh4)}
-.tr-sec td{
-  background:var(--bg3) !important;
-  font-family:'DM Mono',monospace;font-size:9px;
-  letter-spacing:.1em;text-transform:uppercase;
-  color:var(--red) !important;padding:7px 16px;
-}
-.tr-tot td{
-  background:var(--bg3) !important;font-weight:500;
-  color:var(--wh) !important;border-top:1px solid var(--bg5);
-}
-.tr-main td{
-  background:var(--bg4) !important;font-weight:600;
-  font-size:12px !important;border-top:1px solid var(--bg5);
-}
-.tr-muted td{color:var(--wh4) !important;font-size:10px !important}
-.pct-bar{display:flex;align-items:center;gap:6px}
-.bar{height:2px;border-radius:1px;min-width:2px;flex-shrink:0;transition:width .4s ease}
+tbody td{padding:10px 16px;font-family:var(--mono);font-size:11px;text-align:right;color:var(--wh3)}
+tbody td:first-child{font-family:var(--sans);font-size:12px;color:var(--wh);text-align:left}
+.tp{color:var(--green)}.tn{color:var(--red)}.tu{color:var(--wh4)}
+.t-sec td{background:var(--bg3)!important;font-family:var(--mono)!important;font-size:9px!important;letter-spacing:.1em;text-transform:uppercase;color:var(--red)!important}
+.t-tot td{background:var(--bg3);font-weight:600;color:var(--wh)!important}
+.t-grand td{background:var(--bg4);font-size:13px!important;font-weight:600;color:var(--wh)!important}
 
-/* ── FOOTER ── */
-.footer{
-  padding:12px 32px;border-top:1px solid var(--bg4);
-  display:flex;justify-content:space-between;align-items:center;
-  font-family:'DM Mono',monospace;font-size:9px;color:var(--wh4);
-}
-.footer-brand{color:var(--red);font-weight:500}
+/* BAR */
+.bar-wrap{display:flex;align-items:center;gap:8px}
+.bar-track{flex:1;height:3px;background:var(--bg5);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px}
 
-/* ── RESPONSIVE ── */
-@media(max-width:760px){
-  .app{grid-template-columns:1fr}.sidebar{display:none}
-  .kpi-grid{grid-template-columns:repeat(2,1fr)}
-  .content{padding:16px 18px}
-  .empty-steps{grid-template-columns:1fr}
-}
+footer{padding:12px 28px;border-top:1px solid var(--bg4);display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--wh4)}
+footer .fl{color:var(--red)}
+
+@media(max-width:720px){.shell{grid-template-columns:1fr}.sidebar{display:none}.kpi-grid{grid-template-columns:repeat(2,1fr)}.content{padding:16px}.topbar{padding:12px 16px}}
+@media print{.sidebar,.topbar{display:none}.shell{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+<div class="shell">
 
-<!-- TOPBAR -->
-<header class="topbar">
+<aside class="sidebar">
   <div class="brand">
-    <div class="brand-mark">NK</div>
-    <span class="brand-name">Nu-Ko Capital</span>
-    <div class="brand-sep"></div>
-    <span class="brand-sub">P&L · Sankey Viewer</span>
+    <div class="brand-mark"><div class="brand-dot"></div><span class="brand-name">Nu-Ko Capital</span></div>
+    <div class="brand-sub">P&L Sankey</div>
+    <div class="period">Período <span class="val" id="s-period">—</span></div>
   </div>
-  <div class="topbar-right">
-    <div class="badge-live" id="badge-live">
-      <div class="live-dot" id="live-dot"></div>
-      <span id="badge-text">Sin datos</span>
-    </div>
-    <button class="btn" onclick="document.getElementById('file-input').click()">↑ Importar CSV</button>
-    <button class="btn btn-red" id="btn-export" onclick="window.print()" disabled>↓ Exportar</button>
+
+  <div class="upload-zone" id="drop-zone">
+    <input type="file" accept=".csv" id="csv-input" aria-label="Importar CSV EBIT">
+    <div class="up-icon">↑</div>
+    <div class="up-label">Arrastra o haz clic<strong>CSV · QuickBooks EBIT</strong></div>
   </div>
-</header>
+  <div class="up-status" id="up-status"></div>
 
-<div class="app">
+  <nav>
+    <div class="nav-sec">Vistas</div>
+    <div class="nav-item active" id="nav-sankey" onclick="goTo('sankey')"><span class="ni">⇄</span> Sankey P&L</div>
+    <div class="nav-item" id="nav-ebit" onclick="goTo('ebit')"><span class="ni">◈</span> P&L detallado</div>
+    <div class="nav-item" id="nav-gastos" onclick="goTo('gastos')"><span class="ni">◎</span> Análisis gastos</div>
+  </nav>
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="s-label">Navegación</div>
-      <div class="nav-item active" onclick="goPanel(this,'sankey')">
-        <span class="nav-icon">⇄</span> Sankey P&L
-      </div>
-      <div class="nav-item" onclick="goPanel(this,'ebit')">
-        <span class="nav-icon">◈</span> EBIT · Detalle
-      </div>
+  <div class="sidebar-foot">
+    <div class="health-row">Margen neto <span class="hv" id="s-margin">—</span></div>
+    <div class="health-track"><div class="health-fill" id="s-fill" style="width:0%;background:var(--red)"></div></div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="tb-title" id="tb-title">Sankey P&L · Nu-Ko Capital LLC</div>
+    <div class="tb-right">
+      <div class="live-badge"><div class="live-dot" id="live-dot"></div><span id="live-lbl">Sin datos</span></div>
+      <button class="btn" onclick="triggerUpload()">↑ Importar CSV</button>
+      <button class="btn btn-red" onclick="window.print()">↓ Exportar</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="kpi-grid">
+      <div class="kpi accent"><div class="kl">Ingresos totales</div><div class="kv neu" id="k0">—</div><div class="ks" id="k0s">Importa el CSV para comenzar</div></div>
+      <div class="kpi"><div class="kl">Gross profit</div><div class="kv pos" id="k1">—</div><div class="ks">Después de intereses</div></div>
+      <div class="kpi"><div class="kl">Total gastos</div><div class="kv neg" id="k2">—</div><div class="ks">Gastos operativos</div></div>
+      <div class="kpi"><div class="kl">Resultado neto</div><div class="kv neg" id="k3">—</div><div class="ks" id="k3s">Net Income</div></div>
     </div>
 
-    <div class="upload-section">
-      <div class="s-label">Fuente de datos</div>
-      <div class="drop-zone" id="drop-zone"
-           onclick="document.getElementById('file-input').click()"
-           ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
-        <div class="drop-icon">⬆</div>
-        <div class="drop-title">Importar CSV</div>
-        <div class="drop-sub">Click o arrastra el archivo</div>
+    <!-- SANKEY -->
+    <div id="panel-sankey" class="panel active">
+      <div id="sk-empty" class="empty">
+        <div class="empty-icon">⇄</div>
+        <div class="empty-title">Sin datos cargados</div>
+        <div class="empty-sub">Importa el CSV de Profit & Loss exportado desde QuickBooks (by Month) para visualizar el flujo.</div>
+        <button class="empty-btn" onclick="triggerUpload()">↑ Importar CSV ahora</button>
       </div>
-      <div id="file-status" style="display:none;margin-top:8px"></div>
-    </div>
-
-    <div class="sidebar-stats" id="sidebar-stats" style="display:none">
-      <div class="s-label">Resumen</div>
-      <div id="stat-list"></div>
-    </div>
-
-    <div style="flex:1"></div>
-    <div class="sidebar-footer">
-      Formato esperado:<br>
-      EBIT exportado de QuickBooks<br>
-      columnas: Label, Jan, Feb, Mar<br><br>
-      Nu-Ko Capital LLC · 2026
-    </div>
-  </aside>
-
-  <!-- MAIN -->
-  <div class="main">
-    <div class="content">
-
-      <!-- EMPTY STATE -->
-      <div id="panel-empty" class="empty-state">
-        <div class="empty-icon">◈</div>
-        <div class="empty-title">Importa tu P&L para comenzar</div>
-        <div class="empty-sub">Carga el CSV exportado de QuickBooks y el Sankey se construye automáticamente con tus datos reales.</div>
-        <div class="empty-steps">
-          <div class="step">
-            <div class="step-n">01</div>
-            <div class="step-t">Exporta</div>
-            <div class="step-s">P&L desde QuickBooks como CSV</div>
-          </div>
-          <div class="step">
-            <div class="step-n">02</div>
-            <div class="step-t">Importa</div>
-            <div class="step-s">Arrastra o haz click en "Importar CSV"</div>
-          </div>
-          <div class="step">
-            <div class="step-n">03</div>
-            <div class="step-t">Analiza</div>
-            <div class="step-s">Sankey interactivo generado al instante</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PANEL SANKEY -->
-      <div id="panel-sankey" style="display:none">
-        <div class="kpi-grid" id="kpi-grid"></div>
-        <div class="chart-card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Flujo de ingresos y gastos</div>
-              <div class="card-sub">Datos reales QuickBooks · Accrual Basis</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div class="period-tag" id="period-tag">—</div>
-            </div>
-          </div>
+      <div id="sk-content" style="display:none">
+        <div class="card card-corner">
+          <div class="card-title">Flujo de ingresos y gastos</div>
+          <div class="card-sub" id="sk-sub">Pasa el cursor sobre nodos y flujos para ver montos exactos</div>
           <div class="pills">
             <button class="pill on" id="p-full"   onclick="setSK('full')">P&L completo</button>
             <button class="pill"    id="p-income" onclick="setSK('income')">Solo ingresos</button>
             <button class="pill"    id="p-exp"    onclick="setSK('exp')">Solo gastos</button>
           </div>
-          <div style="position:relative"><svg id="sk-svg" width="100%" style="display:block"></svg></div>
+          <div style="position:relative"><svg id="sk-svg" width="100%" style="display:block" role="img" aria-label="Sankey P&L Nu-Ko Capital"></svg></div>
           <div class="legend">
-            <div class="leg"><div class="ld" style="background:#1a9068"></div>Ingresos</div>
-            <div class="leg"><div class="ld" style="background:#1a5fa0"></div>Gross profit</div>
-            <div class="leg"><div class="ld" style="background:#c49412"></div>Intereses COGS</div>
-            <div class="leg"><div class="ld" style="background:#b8436e"></div>BPO / Bad Debt</div>
-            <div class="leg"><div class="ld" style="background:#55554f"></div>Otros gastos</div>
-            <div class="leg"><div class="ld" style="background:#6b65c8"></div>Otros ingresos</div>
-            <div class="leg"><div class="ld" style="background:#c8102e"></div>Déficit neto</div>
+            <div class="leg"><div class="ld" style="background:#1D9E75"></div>Ingresos</div>
+            <div class="leg"><div class="ld" style="background:#185FA5"></div>Gross profit</div>
+            <div class="leg"><div class="ld" style="background:#BA7517"></div>Intereses COGS</div>
+            <div class="leg"><div class="ld" style="background:#D4537E"></div>BPO / Bad Debt</div>
+            <div class="leg"><div class="ld" style="background:#888780"></div>Otros gastos</div>
+            <div class="leg"><div class="ld" style="background:#7F77DD"></div>Otros ingresos</div>
+            <div class="leg"><div class="ld" style="background:#A32D2D"></div>Déficit neto</div>
           </div>
         </div>
       </div>
-
-      <!-- PANEL EBIT -->
-      <div id="panel-ebit" style="display:none">
-        <div class="chart-card" style="padding:0;overflow:hidden">
-          <div style="padding:18px 22px;border-bottom:1px solid var(--bg4);display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div class="card-title">Profit & Loss · Detalle completo</div>
-              <div class="card-sub">Nu-Ko Capital LLC · QuickBooks Accrual Basis</div>
-            </div>
-            <div class="period-tag" id="period-tag2">—</div>
-          </div>
-          <div class="tbl-wrap">
-            <table id="ebit-table">
-              <thead>
-                <tr>
-                  <th>Concepto</th>
-                  <th id="th1">Ene</th>
-                  <th id="th2">Feb</th>
-                  <th id="th3">Mar</th>
-                  <th>Total</th>
-                  <th style="text-align:left;padding-left:20px">Distribución</th>
-                </tr>
-              </thead>
-              <tbody id="ebit-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
     </div>
 
-    <footer class="footer">
-      <span><span class="footer-brand">Nu-Ko Capital LLC</span> · P&L Sankey Viewer · Standalone App</span>
-      <span id="footer-ts">—</span>
-    </footer>
-  </div>
-</div>
+    <!-- EBIT -->
+    <div id="panel-ebit" class="panel">
+      <div id="ebit-empty" class="empty">
+        <div class="empty-icon">◈</div><div class="empty-title">Sin datos</div>
+        <div class="empty-sub">Importa el CSV para ver el P&L detallado.</div>
+        <button class="empty-btn" onclick="triggerUpload()">↑ Importar CSV</button>
+      </div>
+      <div id="ebit-content" style="display:none"></div>
+    </div>
 
+    <!-- GASTOS -->
+    <div id="panel-gastos" class="panel">
+      <div id="gastos-empty" class="empty">
+        <div class="empty-icon">◎</div><div class="empty-title">Sin datos</div>
+        <div class="empty-sub">Importa el CSV para ver el análisis de gastos.</div>
+        <button class="empty-btn" onclick="triggerUpload()">↑ Importar CSV</button>
+      </div>
+      <div id="gastos-content" style="display:none"></div>
+    </div>
+
+  </div>
+
+  <footer>
+    <span>Nu-Ko Capital LLC · P&L Sankey · QuickBooks Accrual Basis</span>
+    <span class="fl" id="footer-ts">Sin datos cargados</span>
+  </footer>
+</div>
+</div>
 <div id="tip"></div>
-<input type="file" id="file-input" accept=".csv" style="display:none" onchange="loadFile(this)">
 
 <script>
-// ═══════════════════════════════════════════════════════════════════
-// ESTADO GLOBAL
-// ═══════════════════════════════════════════════════════════════════
-let G = { rows:{}, months:[], period:'', loaded:false, skView:'full' };
+// ── COLORS ──────────────────────────────────────────────────────────
+const NC={income:'#1D9E75',mid:'#1D9E75',gp:'#185FA5',cogs:'#BA7517',expense:'#D4537E',other:'#888780',extra:'#7F77DD',deficit:'#A32D2D'};
 
-// ═══════════════════════════════════════════════════════════════════
-// CSV PARSER — maneja comillas, $ y paréntesis para negativos
-// ═══════════════════════════════════════════════════════════════════
-function parseCSV(text) {
-  const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
-  const result = [];
-  lines.forEach(line => {
-    const cols = [];
-    let cur='', inQ=false;
-    for(let i=0;i<line.length;i++){
-      const c=line[i];
-      if(c==='"'){ inQ=!inQ; continue; }
-      if(c===','&&!inQ){ cols.push(cur.trim()); cur=''; continue; }
-      cur+=c;
+let D=null, skView='full', curPanel='sankey';
+const TITLES={sankey:'Sankey P&L · Nu-Ko Capital LLC',ebit:'P&L Detallado · Profit & Loss',gastos:'Análisis de Gastos'};
+
+// ── NAV ──────────────────────────────────────────────────────────────
+function goTo(p){
+  curPanel=p;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-'+p).classList.add('active');
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  document.getElementById('panel-'+p).classList.add('active');
+  document.getElementById('tb-title').textContent=TITLES[p];
+  if(D&&p==='ebit')   renderEBIT();
+  if(D&&p==='gastos') renderGastos();
+}
+
+// ── FORMAT ───────────────────────────────────────────────────────────
+function fmt(v,compact=true){
+  const a=Math.abs(v),neg=v<0,s=neg?'(':'' ,e=neg?')':'';
+  let r;
+  if(compact){
+    if(a>=1e6)r='$'+(a/1e6).toFixed(2)+'M';
+    else if(a>=1e3)r='$'+Math.round(a/1e3)+'K';
+    else r='$'+Math.round(a).toLocaleString();
+  }else{
+    r='$'+a.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  return s+r+e;
+}
+
+// ── CSV PARSER — robusto para QuickBooks ─────────────────────────────
+function parseCSV(rawText){
+  // 1. Normalizar saltos de línea (Windows \r\n, Mac \r, Unix \n)
+  const text = rawText.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+
+  // 2. Tokenizar respetando comillas
+  const lines=[];
+  let inQ=false, cur=[], cell='';
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(ch==='"'){
+      // Comilla doble escapada ""
+      if(inQ && text[i+1]==='"'){ cell+='"'; i++; }
+      else inQ=!inQ;
+    } else if(ch===','&&!inQ){
+      cur.push(cell); cell='';
+    } else if(ch==='\n'&&!inQ){
+      cur.push(cell); cell='';
+      if(cur.some(c=>c.trim()))lines.push([...cur]);
+      cur=[];
+    } else {
+      cell+=ch;
     }
-    cols.push(cur.trim());
-    result.push(cols);
+  }
+  cur.push(cell);
+  if(cur.some(c=>c.trim()))lines.push(cur);
+
+  // 3. Parsear money: elimina $, espacios, comas; convierte (x) → -x
+  function money(s){
+    const c=s.replace(/[\$,\s]/g,'').replace(/\(([^)]+)\)/,'-$1').trim();
+    if(!c||c==='-'||c==='')return 0;
+    const n=parseFloat(c);
+    return isNaN(n)?0:n;
+  }
+
+  // 4. Construir mapa label→[jan,feb,mar]
+  const rows={};
+  for(const parts of lines){
+    const label=parts[0].trim(); // TRIM aquí es clave
+    if(!label)continue;
+    // Saltar filas de encabezado/título (sin valores numéricos en cols 1-3)
+    const vals=[1,2,3].map(i=>money(parts[i]||''));
+    if(vals.some(v=>v!==0)) rows[label]=vals;
+  }
+
+  if(Object.keys(rows).length===0)
+    throw new Error('No se encontraron datos. Verifica que el archivo sea el CSV de Profit & Loss de QuickBooks.');
+
+  return rows;
+}
+
+function tot(k){ return(D[k]||[0,0,0]).reduce((s,v)=>s+v,0); }
+
+// ── UPLOAD ───────────────────────────────────────────────────────────
+function triggerUpload(){ document.getElementById('csv-input').click(); }
+
+document.getElementById('csv-input').addEventListener('change',function(e){
+  const f=e.target.files[0]; if(f)loadFile(f);
+  this.value='';
+});
+
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{
+  e.preventDefault();dz.classList.remove('drag');
+  const f=e.dataTransfer.files[0]; if(f)loadFile(f);
+});
+
+function loadFile(file){
+  if(!file.name.toLowerCase().endsWith('.csv')){
+    setStatus('Formato incorrecto. Necesitas un archivo .csv exportado de QuickBooks.','err');
+    return;
+  }
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      D=parseCSV(e.target.result);
+      // Verifica que tenga al menos una clave de ingreso conocida
+      if(!D['Total for Income'] && !D['Gross Profit'])
+        throw new Error('El CSV no parece ser un P&L de QuickBooks. ¿Es el archivo EBIT correcto?');
+      setStatus('✓ '+file.name+' — '+Object.keys(D).length+' conceptos cargados','ok');
+      renderAll();
+    }catch(err){
+      setStatus('Error: '+err.message,'err');
+      console.error(err);
+    }
+  };
+  r.onerror=()=>setStatus('No se pudo leer el archivo.','err');
+  r.readAsText(file,'UTF-8');
+}
+
+function setStatus(msg,type){
+  const el=document.getElementById('up-status');
+  el.textContent=msg; el.className='up-status '+type;
+}
+
+// ── RENDER ALL ───────────────────────────────────────────────────────
+function renderAll(){
+  renderKPIs();
+  ['sk','ebit','gastos'].forEach(k=>{
+    document.getElementById(k+'-empty').style.display='none';
+    const c=document.getElementById(k+'-content');
+    if(c)c.style.display='block';
   });
-  return result;
+  document.getElementById('live-dot').classList.add('on');
+  document.getElementById('live-lbl').textContent='Datos cargados';
+  document.getElementById('s-period').textContent='Ene – Mar 2026';
+  document.getElementById('footer-ts').textContent='● Actualizado '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('sk-sub').textContent='Datos reales QuickBooks · Ene–Mar 2026 · Pasa el cursor sobre nodos y flujos';
+  drawSankey(skView);
+  if(curPanel==='ebit')   renderEBIT();
+  if(curPanel==='gastos') renderGastos();
 }
 
-function parseMoney(s) {
-  if(!s||s.trim()==='')return 0;
-  s=s.replace(/[\s"]/g,'').replace(/\$/g,'').replace(/,/g,'');
-  const neg=s.startsWith('(')&&s.endsWith(')');
-  s=s.replace(/[()]/g,'');
-  if(s===''||s==='-'||s==='- ')return 0;
-  const v=parseFloat(s)||0;
-  return neg?-v:v;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// LEER CSV — detecta automáticamente columnas de meses
-// ═══════════════════════════════════════════════════════════════════
-function processCSV(text) {
-  const raw = parseCSV(text);
-  G.rows = {};
-  G.months = [];
-  G.period = '';
-
-  // Detectar fila de encabezados (busca "Jan" o "January")
-  let monthRow = -1, monthCols = [];
-  for(let r=0;r<Math.min(10,raw.length);r++){
-    const row = raw[r];
-    const found = [];
-    row.forEach((c,i)=>{ if(c&&/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i.test(c)) found.push({i,label:c.trim()}); });
-    if(found.length>=1){ monthRow=r; monthCols=found; break; }
-  }
-
-  // Fallback: assume cols 1,2,3 son meses
-  if(monthCols.length===0){
-    monthCols=[{i:1,label:'Enero'},{i:2,label:'Febrero'},{i:3,label:'Marzo'}];
-  }
-
-  G.months = monthCols.map(m=>m.label);
-  G.mCols  = monthCols.map(m=>m.i);
-
-  // Detectar periodo del encabezado
-  for(let r=0;r<Math.min(6,raw.length);r++){
-    const joined=raw[r].join(' ');
-    if(/january|february|march|2026|2025/i.test(joined)&&joined.length<80){
-      G.period=joined.replace(/\s+/g,' ').trim(); break;
-    }
-  }
-
-  // Leer todas las filas de datos
-  for(let r=0;r<raw.length;r++){
-    if(r===monthRow)continue;
-    const row=raw[r];
-    const label=row[0]?row[0].trim().replace(/\s+/g,' '):'';
-    if(!label||label.length>80)continue;
-    const vals=G.mCols.map(ci=>parseMoney(row[ci]||''));
-    if(vals.some(v=>v!==0)){
-      G.rows[label.toLowerCase()]=vals;
-    }
-  }
-}
-
-// Busca la fila más cercana al keyword (tolerante)
-function find(keyword) {
-  const kw=keyword.toLowerCase().trim();
-  // exact
-  if(G.rows[kw])return G.rows[kw];
-  // startsWith
-  const k1=Object.keys(G.rows).find(k=>k.startsWith(kw));
-  if(k1)return G.rows[k1];
-  // includes
-  const k2=Object.keys(G.rows).find(k=>k.includes(kw));
-  if(k2)return G.rows[k2];
-  return G.months.map(()=>0);
-}
-
-function tot(keyword){ return find(keyword).reduce((s,v)=>s+v,0); }
-function r3(v){ return Math.round(v); }
-
-// ═══════════════════════════════════════════════════════════════════
-// FORMAT
-// ═══════════════════════════════════════════════════════════════════
-function fmt(v,short=false){
-  const a=Math.abs(v),s=v<0?'(':'' ,e=v<0?')':'';
-  if(short){
-    if(a>=1e6)return s+'$'+(a/1e6).toFixed(1)+'M'+e;
-    if(a>=1e3)return s+'$'+Math.round(a/1e3)+'K'+e;
-    return s+'$'+Math.round(a)+e;
-  }
-  if(a>=1e6)return s+'$'+(a/1e6).toFixed(2)+'M'+e;
-  if(a>=1e3)return s+'$'+a.toLocaleString('en-US',{maximumFractionDigits:0})+e;
-  return s+'$'+a.toFixed(2)+e;
-}
-function cls(v,inv=false){
-  if(v===0)return 'td-neu';
-  const pos=inv?(v<0):(v>0);
-  return pos?'td-pos':'td-neg';
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// RENDER KPIs
-// ═══════════════════════════════════════════════════════════════════
+// ── KPIs ─────────────────────────────────────────────────────────────
 function renderKPIs(){
-  const totalInc = tot('total for income');
-  const cogs     = tot('financial interests');
-  const gp       = tot('gross profit');
-  const totalExp = tot('total for expenses');
-  const netOp    = tot('net operating income');
-  const otherInc = tot('total for other income');
-  const netInc   = tot('net income');
-  const margin   = totalInc!==0?(netInc/totalInc*100):0;
+  const ti=tot('Total for Income');
+  const gp=tot('Gross Profit');
+  const ex=tot('Total for Expenses');
+  const ni=tot('Net Income');
+  const mg=ti?(ni/ti*100).toFixed(1):'0.0';
 
-  const cards=[
-    {l:'Ingresos totales', v:fmt(totalInc,true), c:'neu', s:'Total for Income', acc:true},
-    {l:'Gross profit',     v:fmt(gp,true),       c:gp>0?'pos':'neg', s:'Después de COGS'},
-    {l:'Total gastos op.', v:fmt(totalExp,true),  c:'neg', s:'Total for Expenses'},
-    {l:'Net Income',       v:fmt(netInc,true),    c:netInc>=0?'pos':'neg', s:`Margen: ${margin.toFixed(1)}%`},
-  ];
-
-  document.getElementById('kpi-grid').innerHTML=cards.map(c=>`
-    <div class="kpi ${c.acc?'accent':''}">
-      <div class="kl">${c.l}</div>
-      <div class="kv ${c.c}">${c.v}</div>
-      <div class="ks">${c.s}</div>
-    </div>`).join('');
+  document.getElementById('k0').textContent=fmt(ti);
+  document.getElementById('k0s').textContent='Ene–Mar 2026';
+  document.getElementById('k1').textContent=fmt(gp);
+  document.getElementById('k2').textContent=fmt(ex);
+  document.getElementById('k3').textContent=fmt(ni);
+  document.getElementById('k3').className='kv '+(ni>=0?'pos':'neg');
+  document.getElementById('k3s').textContent='Margen: '+mg+'%';
+  document.getElementById('s-margin').textContent=mg+'%';
+  const pct=Math.min(100,Math.abs(parseFloat(mg)));
+  document.getElementById('s-fill').style.width=pct+'%';
+  document.getElementById('s-fill').style.background=parseFloat(mg)>=0?'var(--green)':'var(--red)';
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// SANKEY
-// ═══════════════════════════════════════════════════════════════════
-const NC={income:'#1a9068',mid:'#1a9068',gp:'#1a5fa0',cogs:'#c49412',
-          expense:'#b8436e',other:'#55554f',extra:'#6b65c8',deficit:'#c8102e'};
+// ── SANKEY DATA ──────────────────────────────────────────────────────
+function buildSK(view){
+  const ti    =Math.round(tot('Total for Income'));
+  const cogs  =Math.round(tot('Total for Cost of Goods Sold'));
+  const gp    =Math.round(tot('Gross Profit'));
+  const bpo   =Math.round(tot('Expense BPO'));
+  const bd    =Math.round(tot('Total for General business expenses')); // Bad Debt + Gen Biz
+  const soft  =Math.round(tot('Total for Software & Apps'));
+  const labor =Math.round(tot('Contract labor'));
+  const legal =Math.round(tot('Legal & Professional Services'));
+  const bank  =Math.round(tot('Total for Bank Charges & Fees'));
+  const comm  =Math.round(tot('Total for Commissions & fees'));
+  const ins   =Math.round(tot('Insurance'));
+  const taxes =Math.round(tot('Taxes paid'));
+  const oExp  =bank+comm+ins+taxes;
+  const tExp  =Math.round(tot('Total for Expenses'));
+  const oi    =Math.round(tot('Total for Other income')||tot('Total for Other Income'));
+  const netOp =tot('Net Operating Income');
+  const deficit=Math.abs(Math.round(netOp));
 
-function buildSankeyData(view){
-  const totalInc=r3(tot('total for income'));
-  const cogs_v  =r3(tot('financial interests'));
-  const gp_v    =r3(tot('gross profit'));
-  const totalExp=r3(tot('total for expenses'));
-  const netOp   =r3(tot('net operating income'));
-  const otherInc=r3(tot('total for other income'));
-  const netInc  =r3(tot('net income'));
+  // Ingresos individuales
+  const disc  =Math.round(tot('Discount fee'));
+  const wire  =Math.round(tot('Wire Fee'));
+  const cancel=Math.round(tot('Cancel Fee'));
+  const pen   =Math.round(tot('Penalties Fee'));
+  const bdrec =Math.round(tot('Bad debt Recoveries'));
+  const oIn   =Math.round(
+    tot('Ach fee')+tot('Schedule Fee')+tot('Fuel Advance Fee')+tot('Transflo Fee')+
+    tot('Comdata Funding')+tot('Transfer Fee')+tot('Under Fee')+tot('LoadConnex fee')+tot('Mailing Fee')
+  );
 
-  // ingresos
-  const v_disc    =r3(tot('discount fee'));
-  const v_wire    =r3(tot('wire fee'));
-  const v_cancel  =r3(tot('cancel fee'));
-  const v_pen     =r3(tot('penalties fee'));
-  const v_bdrec   =r3(tot('bad debt recoveries'));
-  const v_otros_in=r3(totalInc-v_disc-v_wire-v_cancel-v_pen-v_bdrec);
+  // Distribución proporcional del GP entre gastos
+  function prop(v){ return tExp>0?Math.round(gp*v/tExp):0; }
 
-  // gastos
-  const v_bpo  =r3(tot('expense bpo'));
-  const v_genbiz=r3(tot('total for general business'));
-  const v_soft =r3(tot('total for software'));
-  const v_labor=r3(tot('contract labor'));
-  const v_legal=r3(tot('legal & professional'));
-  const v_otros_exp=Math.max(0,r3(totalExp-v_bpo-v_genbiz-v_soft-v_labor-v_legal));
-
-  // Para el Sankey: el GP se distribuye proporcionalmente entre los gastos
-  function pr(exp){ return Math.max(0,Math.round(Math.abs(gp_v)*exp/Math.abs(totalExp))); }
-  const deficit_from_gp=Math.abs(r3(netOp));
-  const deficit_total  =Math.abs(r3(netInc));
-  const oi_v=r3(otherInc);
-
-  if(view==='full') return {
+  if(view==='full'){
+    return{
+      nodes:[
+        {id:'disc',   label:'Discount fee',    g:'income'},
+        {id:'wire',   label:'Wire fee',         g:'income'},
+        {id:'cancel', label:'Cancel fee',       g:'income'},
+        {id:'pen',    label:'Penalties fee',    g:'income'},
+        {id:'bdrec',  label:'Bad Debt Rec.',    g:'income'},
+        {id:'oin',    label:'Otros fees',       g:'income'},
+        {id:'rev',    label:'Ingresos\nbrutos', g:'mid'},
+        {id:'cogs',   label:'Intereses\n(COGS)',g:'cogs'},
+        {id:'gp',     label:'Gross\nProfit',    g:'gp'},
+        {id:'bpo',    label:'Expense BPO',      g:'expense'},
+        {id:'bd',     label:'Bad Debt\n& Gen.', g:'expense'},
+        {id:'soft',   label:'Software\n& Apps', g:'other'},
+        {id:'labor',  label:'Contract\nLabor',  g:'other'},
+        {id:'legal',  label:'Legal &\nProf.',   g:'other'},
+        {id:'oexp',   label:'Otros\ngastos',    g:'other'},
+        {id:'oi',     label:'Otros\ningresos',  g:'extra'},
+        {id:'deficit',label:'Déficit\nneto',    g:'deficit'},
+      ],
+      links:[
+        {s:'disc',  t:'rev', v:disc},
+        {s:'wire',  t:'rev', v:wire},
+        {s:'cancel',t:'rev', v:cancel},
+        {s:'pen',   t:'rev', v:pen},
+        {s:'bdrec', t:'rev', v:bdrec},
+        {s:'oin',   t:'rev', v:oIn},
+        {s:'rev', t:'cogs', v:cogs},
+        {s:'rev', t:'gp',   v:gp},
+        {s:'gp', t:'bpo',   v:prop(bpo)},
+        {s:'gp', t:'bd',    v:prop(bd)},
+        {s:'gp', t:'soft',  v:prop(soft)},
+        {s:'gp', t:'labor', v:prop(labor)},
+        {s:'gp', t:'legal', v:prop(legal)},
+        {s:'gp', t:'oexp',  v:prop(oExp)},
+        {s:'gp', t:'deficit',v:deficit},
+        {s:'oi', t:'deficit',v:oi},
+      ].filter(l=>l.v>0)
+    };
+  }
+  if(view==='income'){
+    return{
+      nodes:[
+        {id:'disc',  label:'Discount fee',   g:'income'},
+        {id:'wire',  label:'Wire fee',        g:'income'},
+        {id:'cancel',label:'Cancel fee',      g:'income'},
+        {id:'pen',   label:'Penalties fee',   g:'income'},
+        {id:'bdrec', label:'Bad Debt Rec.',   g:'income'},
+        {id:'ach',   label:'ACH fee',         g:'income'},
+        {id:'sch',   label:'Schedule fee',    g:'income'},
+        {id:'fuel',  label:'Fuel Advance',    g:'income'},
+        {id:'omin',  label:'Otros menores',   g:'income'},
+        {id:'rev',   label:'Ingresos\nbrutos',g:'mid'},
+        {id:'cogs',  label:'Intereses (COGS)',g:'cogs'},
+        {id:'gp',    label:'Gross Profit',    g:'gp'},
+      ],
+      links:[
+        {s:'disc',  t:'rev',v:disc},
+        {s:'wire',  t:'rev',v:wire},
+        {s:'cancel',t:'rev',v:cancel},
+        {s:'pen',   t:'rev',v:pen},
+        {s:'bdrec', t:'rev',v:bdrec},
+        {s:'ach',   t:'rev',v:Math.round(tot('Ach fee'))},
+        {s:'sch',   t:'rev',v:Math.round(tot('Schedule Fee'))},
+        {s:'fuel',  t:'rev',v:Math.round(tot('Fuel Advance Fee'))},
+        {s:'omin',  t:'rev',v:Math.round(tot('Transflo Fee')+tot('Comdata Funding')+tot('Transfer Fee')+tot('Under Fee')+tot('LoadConnex fee')+tot('Mailing Fee'))},
+        {s:'rev',t:'cogs',v:cogs},
+        {s:'rev',t:'gp',  v:gp},
+      ].filter(l=>l.v>0)
+    };
+  }
+  return{
     nodes:[
-      {id:'disc',   label:'Discount fee',     g:'income'},
-      {id:'wire',   label:'Wire fee',          g:'income'},
-      {id:'cancel', label:'Cancel fee',        g:'income'},
-      {id:'pen',    label:'Penalties fee',     g:'income'},
-      {id:'bdrec',  label:'Bad Debt Rec.',     g:'income'},
-      {id:'oin',    label:'Otros fees',        g:'income'},
-      {id:'rev',    label:'Ingresos\nbrutos',  g:'mid'},
-      {id:'cogs',   label:'Intereses\n(COGS)', g:'cogs'},
-      {id:'gp',     label:'Gross\nProfit',     g:'gp'},
-      {id:'bpo',    label:'Expense BPO',       g:'expense'},
-      {id:'bd',     label:'Bad Debt\n& Gen Biz',g:'expense'},
-      {id:'soft',   label:'Software\n& Apps',  g:'other'},
-      {id:'labor',  label:'Contract\nLabor',   g:'other'},
-      {id:'legal',  label:'Legal &\nProf.',    g:'other'},
-      {id:'oexp',   label:'Otros\ngastos',     g:'other'},
-      {id:'oi',     label:'Otros\ningresos',   g:'extra'},
-      {id:'def',    label:'Déficit\nneto',     g:'deficit'},
+      {id:'gp',     label:'Gross Profit',     g:'gp'},
+      {id:'oi',     label:'Otros ingresos',   g:'extra'},
+      {id:'bpo',    label:'Expense BPO',      g:'expense'},
+      {id:'bd',     label:'Bad Debt & Gen.',  g:'expense'},
+      {id:'soft',   label:'Software & Apps',  g:'other'},
+      {id:'labor',  label:'Contract Labor',   g:'other'},
+      {id:'legal',  label:'Legal & Prof.',    g:'other'},
+      {id:'oexp',   label:'Otros gastos',     g:'other'},
+      {id:'deficit',label:'Déficit neto',     g:'deficit'},
     ],
     links:[
-      {s:'disc',  t:'rev',  v:v_disc},
-      {s:'wire',  t:'rev',  v:v_wire},
-      {s:'cancel',t:'rev',  v:v_cancel},
-      {s:'pen',   t:'rev',  v:v_pen},
-      {s:'bdrec', t:'rev',  v:v_bdrec},
-      {s:'oin',   t:'rev',  v:v_otros_in},
-      {s:'rev',   t:'cogs', v:cogs_v},
-      {s:'rev',   t:'gp',   v:Math.abs(gp_v)},
-      {s:'gp',    t:'bpo',  v:pr(v_bpo)},
-      {s:'gp',    t:'bd',   v:pr(v_genbiz)},
-      {s:'gp',    t:'soft', v:pr(v_soft)},
-      {s:'gp',    t:'labor',v:pr(v_labor)},
-      {s:'gp',    t:'legal',v:pr(v_legal)},
-      {s:'gp',    t:'oexp', v:pr(v_otros_exp)},
-      {s:'gp',    t:'def',  v:deficit_from_gp},
-      {s:'oi',    t:'def',  v:oi_v},
+      {s:'gp', t:'bpo',    v:prop(bpo)},
+      {s:'gp', t:'bd',     v:prop(bd)},
+      {s:'gp', t:'soft',   v:prop(soft)},
+      {s:'gp', t:'labor',  v:prop(labor)},
+      {s:'gp', t:'legal',  v:prop(legal)},
+      {s:'gp', t:'oexp',   v:prop(oExp)},
+      {s:'gp', t:'deficit',v:deficit},
+      {s:'oi', t:'deficit',v:oi},
     ].filter(l=>l.v>0)
   };
+}
 
-  if(view==='income') return {
-    nodes:[
-      {id:'disc',   label:'Discount fee',      g:'income'},
-      {id:'wire',   label:'Wire fee',           g:'income'},
-      {id:'cancel', label:'Cancel fee',         g:'income'},
-      {id:'pen',    label:'Penalties fee',      g:'income'},
-      {id:'bdrec',  label:'Bad Debt Rec.',      g:'income'},
-      {id:'oin',    label:'Otros fees',         g:'income'},
-      {id:'rev',    label:'Ingresos\nbrutos',   g:'mid'},
-      {id:'cogs',   label:'Intereses\n(COGS)',  g:'cogs'},
-      {id:'gp',     label:'Gross\nProfit',      g:'gp'},
-    ],
-    links:[
-      {s:'disc',  t:'rev', v:v_disc},
-      {s:'wire',  t:'rev', v:v_wire},
-      {s:'cancel',t:'rev', v:v_cancel},
-      {s:'pen',   t:'rev', v:v_pen},
-      {s:'bdrec', t:'rev', v:v_bdrec},
-      {s:'oin',   t:'rev', v:v_otros_in},
-      {s:'rev',   t:'cogs',v:cogs_v},
-      {s:'rev',   t:'gp',  v:Math.abs(gp_v)},
-    ].filter(l=>l.v>0)
-  };
-
-  return {
-    nodes:[
-      {id:'gp',   label:'Gross Profit',      g:'gp'},
-      {id:'bpo',  label:'Expense BPO',        g:'expense'},
-      {id:'bd',   label:'Bad Debt & Gen Biz', g:'expense'},
-      {id:'soft', label:'Software & Apps',    g:'other'},
-      {id:'labor',label:'Contract Labor',     g:'other'},
-      {id:'legal',label:'Legal & Prof.',      g:'other'},
-      {id:'oexp', label:'Otros gastos',       g:'other'},
-      {id:'oi',   label:'Otros ingresos',     g:'extra'},
-      {id:'def',  label:'Déficit neto',       g:'deficit'},
-    ],
-    links:[
-      {s:'gp',  t:'bpo',  v:pr(v_bpo)},
-      {s:'gp',  t:'bd',   v:pr(v_genbiz)},
-      {s:'gp',  t:'soft', v:pr(v_soft)},
-      {s:'gp',  t:'labor',v:pr(v_labor)},
-      {s:'gp',  t:'legal',v:pr(v_legal)},
-      {s:'gp',  t:'oexp', v:pr(v_otros_exp)},
-      {s:'gp',  t:'def',  v:deficit_from_gp},
-      {s:'oi',  t:'def',  v:oi_v},
-    ].filter(l=>l.v>0)
-  };
+// ── DRAW SANKEY ──────────────────────────────────────────────────────
+function setSK(v){
+  skView=v;
+  ['full','income','exp'].forEach(k=>document.getElementById('p-'+k).classList.toggle('on',k===v));
+  if(D)drawSankey(v);
 }
 
 function drawSankey(view){
-  const data=buildSankeyData(view);
+  if(!D)return;
+  const raw=buildSK(view);
   const svg=d3.select('#sk-svg');
   svg.selectAll('*').remove();
-  const W=svg.node().parentElement.clientWidth||680;
+  const W=svg.node().parentElement.clientWidth||700;
   const H=view==='full'?540:300;
   svg.attr('viewBox',`0 0 ${W} ${H}`).attr('height',H);
 
-  const gen=d3.sankey()
-    .nodeId(n=>n.id).nodeWidth(12)
+  const gen=d3.sankey().nodeId(n=>n.id).nodeWidth(13)
     .nodePadding(view==='full'?7:12)
-    .extent([[16,16],[W-16,H-20]]);
+    .extent([[18,16],[W-18,H-22]]);
 
   const {nodes,links}=gen({
-    nodes:data.nodes.map(n=>({...n})),
-    links:data.links.map(l=>({source:l.s,target:l.t,value:l.v}))
+    nodes:raw.nodes.map(n=>({...n})),
+    links:raw.links.map(l=>({source:l.s,target:l.t,value:l.v}))
   });
 
-  const nm=Object.fromEntries(data.nodes.map(n=>[n.id,n]));
+  const nm=Object.fromEntries(raw.nodes.map(n=>[n.id,n]));
   const tip=document.getElementById('tip');
 
-  // links
   svg.append('g').attr('fill','none')
     .selectAll('path').data(links).join('path')
     .attr('d',d3.sankeyLinkHorizontal())
-    .attr('stroke',l=>NC[(nm[l.source.id]||{}).g]||'#555')
+    .attr('stroke',l=>NC[(nm[l.source.id]||{}).g]||'#888')
     .attr('stroke-width',l=>Math.max(1,l.width))
-    .attr('opacity',.2)
+    .attr('opacity',.22)
     .on('mouseover',function(e,l){
-      d3.select(this).attr('opacity',.55);
+      d3.select(this).attr('opacity',.6);
       tip.style.opacity=1;
-      const sl=(l.source.label||'').replace(/\n/g,' ');
-      const tl=(l.target.label||'').replace(/\n/g,' ');
-      tip.innerHTML=`<strong>${sl} → ${tl}</strong><span class="tip-val">${fmt(l.value)}</span>`;
+      tip.innerHTML=`<strong>${(l.source.label||'').replace('\n',' ')} → ${(l.target.label||'').replace('\n',' ')}</strong><br>${fmt(l.value,false)}`;
     })
-    .on('mousemove',e=>{tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-42)+'px'})
-    .on('mouseout',function(){d3.select(this).attr('opacity',.2);tip.style.opacity=0});
+    .on('mousemove',e=>{tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-42)+'px';})
+    .on('mouseout',function(){d3.select(this).attr('opacity',.22);tip.style.opacity=0;});
 
-  // nodes
   const ng=svg.append('g');
   const node=ng.selectAll('g').data(nodes).join('g');
 
   node.append('rect')
     .attr('x',n=>n.x0).attr('y',n=>n.y0)
     .attr('width',n=>n.x1-n.x0).attr('height',n=>Math.max(1,n.y1-n.y0))
-    .attr('fill',n=>NC[(nm[n.id]||{}).g]||'#555').attr('rx',2)
+    .attr('fill',n=>NC[(nm[n.id]||{}).g]||'#888').attr('rx',2)
     .on('mouseover',function(e,n){
       const inV=links.filter(l=>l.target.id===n.id).reduce((s,l)=>s+l.value,0);
       const outV=links.filter(l=>l.source.id===n.id).reduce((s,l)=>s+l.value,0);
       tip.style.opacity=1;
-      const lbl=(n.label||n.id).replace(/\n/g,' ');
-      tip.innerHTML=`<strong>${lbl}</strong>${inV?'Entrada: <span class="tip-val">'+fmt(inV)+'</span><br>':''}${outV?'Salida: <span class="tip-val">'+fmt(outV)+'</span>':''}`;
+      tip.innerHTML=`<strong>${(n.label||n.id).replace('\n',' ')}</strong>${inV?'<br>Entrada: '+fmt(inV,false):''}${outV?'<br>Salida: '+fmt(outV,false):''}`;
     })
-    .on('mousemove',e=>{tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-42)+'px'})
+    .on('mousemove',e=>{tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-42)+'px';})
     .on('mouseout',()=>tip.style.opacity=0);
 
   const fs=view==='full'?9:10;
-  // labels externos
   node.append('text')
     .attr('x',n=>n.x0<W/2?n.x1+6:n.x0-6)
     .attr('y',n=>(n.y0+n.y1)/2)
     .attr('text-anchor',n=>n.x0<W/2?'start':'end')
     .attr('dominant-baseline','middle')
-    .attr('font-size',fs).attr('fill','#888882')
-    .attr('font-family','DM Mono, monospace')
+    .attr('font-size',fs).attr('font-family','DM Mono,monospace').attr('fill','#888780')
     .each(function(n){
       const el=d3.select(this);
       const lines=(n.label||n.id).split('\n');
@@ -783,241 +629,149 @@ function drawSankey(view){
         .attr('dy',i===0?'-0.45em':'1.1em').text(ln));
     });
 
-  // value labels dentro del nodo
   node.filter(n=>n.y1-n.y0>22).append('text')
     .attr('x',n=>(n.x0+n.x1)/2).attr('y',n=>(n.y0+n.y1)/2)
     .attr('text-anchor','middle').attr('dominant-baseline','middle')
-    .attr('font-size',8).attr('fill','rgba(255,255,255,.65)').attr('pointer-events','none')
-    .attr('font-family','DM Mono, monospace')
+    .attr('font-size',8).attr('font-family','DM Mono,monospace')
+    .attr('fill','rgba(255,255,255,.72)').attr('pointer-events','none')
     .text(n=>{
+      const h=n.y1-n.y0; if(h<22)return'';
       const inV=links.filter(l=>l.target.id===n.id).reduce((s,l)=>s+l.value,0);
       const outV=links.filter(l=>l.source.id===n.id).reduce((s,l)=>s+l.value,0);
       return fmt(Math.max(inV,outV),true);
     });
 }
 
-function setSK(v){
-  G.skView=v;
-  ['full','income','exp'].forEach(k=>document.getElementById('p-'+k).classList.toggle('on',k===v));
-  drawSankey(v);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// RENDER TABLA EBIT
-// ═══════════════════════════════════════════════════════════════════
+// ── P&L TABLE ────────────────────────────────────────────────────────
 function renderEBIT(){
-  const nm=G.months;
-  document.getElementById('th1').textContent=nm[0]||'Ene';
-  document.getElementById('th2').textContent=nm[1]||'Feb';
-  document.getElementById('th3').textContent=nm[2]||'Mar';
+  if(!D)return;
+  document.getElementById('ebit-empty').style.display='none';
+  const el=document.getElementById('ebit-content');
+  el.style.display='block';
 
-  const totalInc=r3(tot('total for income'));
-  const totalExp=r3(tot('total for expenses'));
-  const maxAbs=Math.max(Math.abs(totalInc),Math.abs(totalExp));
-
-  function secRow(label){ return`<tr class="tr-sec"><td colspan="6">${label.toUpperCase()}</td></tr>`; }
-
-  function dataRow(label,vals,indent=false,isIncome=false){
-    const total=r3(vals.reduce((s,v)=>s+v,0));
-    const pct=maxAbs>0?Math.abs(total)/maxAbs*100:0;
-    const c=total>=0?'td-pos':'td-neg';
-    const barColor=isIncome?'#1a9068':total<0?'#c8102e':'#55554f';
-    const pad=indent?'padding-left:28px':'padding-left:20px';
-    return`<tr>
-      <td style="${pad}">${label}</td>
-      ${vals.map(v=>`<td class="${cls(v,isIncome)}">${fmt(v)}</td>`).join('')}
-      <td class="${c}">${fmt(total)}</td>
-      <td><div class="pct-bar" style="padding-left:4px">
-        <div class="bar" style="width:${Math.round(Math.min(pct,100))}px;background:${barColor}"></div>
-        <span style="font-size:9px;color:var(--wh4)">${pct.toFixed(0)}%</span>
-      </div></td>
-    </tr>`;
+  function row(label,key,indent,isIncome){
+    const v=D[key]; if(!v)return'';
+    const tt=v[0]+v[1]+v[2]; if(Math.abs(tt)<0.01)return'';
+    const tc=tt>=0?(isIncome?'tp':'tn'):(isIncome?'tn':'tp');
+    const vClass=x=>x>=0?(isIncome?'tp':'tn'):'tp';
+    return`<tr><td style="${indent?'padding-left:28px':''}">${label}</td>
+      ${v.map(x=>`<td class="${vClass(x)}">${fmt(x,false)}</td>`).join('')}
+      <td class="${tc}" style="font-weight:500">${fmt(tt,false)}</td></tr>`;
+  }
+  function sec(t){return`<tr class="t-sec"><td colspan="5" style="padding-left:18px">${t}</td></tr>`;}
+  function totRow(label,key,big){
+    const v=D[key]||[0,0,0]; const tt=v[0]+v[1]+v[2];
+    const tc=tt>=0?'tp':'tn';
+    return`<tr class="${big?'t-grand':'t-tot'}"><td>${label}</td>
+      ${v.map(x=>`<td class="${x>=0?'tp':'tn'}">${fmt(x,false)}</td>`).join('')}
+      <td class="${tc}">${fmt(tt,false)}</td></tr>`;
   }
 
-  function totRow(label,keyword,big=false){
-    const vals=find(keyword);
-    const total=r3(vals.reduce((s,v)=>s+v,0));
-    const c=total>=0?'td-pos':'td-neg';
-    const cls2=big?'tr-main':'tr-tot';
-    return`<tr class="${cls2}">
-      <td>${label}</td>
-      ${vals.map(v=>`<td class="${cls(v)}">${fmt(v)}</td>`).join('')}
-      <td class="${c}">${fmt(total)}</td>
-      <td></td>
-    </tr>`;
-  }
+  const incKeys=['Discount fee','Wire Fee','Cancel Fee','Penalties Fee','Bad debt Recoveries','Ach fee','Schedule Fee','Fuel Advance Fee','Transflo Fee','Comdata Funding','Transfer Fee','Under Fee','LoadConnex fee','Mailing Fee'];
+  const expKeys=['Expense BPO','Bad Debt','General business expenses','Contract labor','Legal & Professional Services','Bank Charges & Fees','LX Rebate Expense','UCC','Postal Charge','Insurance','Taxes paid'];
+  const softKeys=['Factorview','Equifax','Experian','Transflo','Intuit','B2Chat','DoTribe','IDScan','Saasant'];
+  const otherKeys=['LX Rebate','Referrals','Other income'];
 
-  // Líneas de ingreso
-  const incomeKeys=[
-    ['Discount fee','discount fee'],['Wire fee','wire fee'],['Cancel fee','cancel fee'],
-    ['Penalties fee','penalties fee'],['Bad Debt Recoveries','bad debt recoveries'],
-    ['ACH fee','ach fee'],['Schedule fee','schedule fee'],['Fuel Advance fee','fuel advance fee'],
-    ['Transflo fee','transflo fee'],['Comdata Funding','comdata funding'],
-    ['Transfer fee','transfer fee'],['Under fee','under fee'],
-    ['LoadConnex fee','loadconnex fee'],['Mailing fee','mailing fee'],
-  ];
-
-  const expKeys=[
-    ['Expense BPO','expense bpo'],['Bad Debt','bad debt'],
-    ['Total General Business','total for general business'],
-    ['Total Software & Apps','total for software'],
-    ['Contract Labor','contract labor'],
-    ['Legal & Professional','legal & professional'],
-    ['Total Bank Charges','total for bank charges'],
-    ['Total Commissions','total for commissions'],
-    ['Insurance','insurance'],['Taxes paid','taxes paid'],
-  ];
-
-  const otherKeys=[
-    ['LX Rebate','lx rebate'],['Referrals','referrals'],['Other income','other income'],
-  ];
-
-  let html='';
-  html+=secRow('Ingresos operativos');
-  incomeKeys.forEach(([l,k])=>{ const v=find(k); if(v.some(x=>x!==0)) html+=dataRow(l,v,true,true); });
-  html+=totRow('Total ingresos','total for income');
-  html+=totRow('Financial Interests (COGS)','financial interests');
-  html+=totRow('Gross Profit','gross profit',true);
-
-  html+=secRow('Gastos operativos');
-  expKeys.forEach(([l,k])=>{ const v=find(k); if(v.some(x=>x!==0)) html+=dataRow(l,v,true,false); });
-  html+=totRow('Total gastos operativos','total for expenses');
-  html+=totRow('Utilidad operativa neta','net operating income',true);
-
-  html+=secRow('Otros ingresos');
-  otherKeys.forEach(([l,k])=>{ const v=find(k); if(v.some(x=>x!==0)) html+=dataRow(l,v,true,true); });
-  html+=totRow('Total otros ingresos','total for other income');
-
-  html+=totRow('NET INCOME','net income',true);
-
-  // Márgenes
-  const incVals=find('total for income');
-  const netVals=find('net income');
-  const gpVals=find('gross profit');
-  function marginRow(label,numVals){
-    const cells=numVals.map((v,i)=>{
-      const inc=incVals[i];const m=inc!==0?(v/inc*100):0;
-      return`<td class="${m>=0?'td-pos':'td-neg'}">${m.toFixed(1)}%</td>`;
-    }).join('');
-    const totInc=incVals.reduce((s,v)=>s+v,0);
-    const totNum=numVals.reduce((s,v)=>s+v,0);
-    const tm=totInc!==0?(totNum/totInc*100):0;
-    return`<tr class="tr-muted"><td style="padding-left:20px">${label}</td>${cells}<td class="${tm>=0?'td-pos':'td-neg'}">${tm.toFixed(1)}%</td><td></td></tr>`;
-  }
-  html+=marginRow('Margen bruto (%)',gpVals);
-  html+=marginRow('Margen neto (%)',netVals);
-
-  document.getElementById('ebit-body').innerHTML=html;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// SIDEBAR STATS
-// ═══════════════════════════════════════════════════════════════════
-function renderSidebar(){
-  const items=[
-    {l:'Ingresos',  v:fmt(tot('total for income'),true),   c:'neu'},
-    {l:'Gross P.',  v:fmt(tot('gross profit'),true),        c:'pos'},
-    {l:'Gastos',    v:fmt(tot('total for expenses'),true),  c:'neg'},
-    {l:'Net Inc.',  v:fmt(tot('net income'),true),          c:'neg'},
-    {l:'Discount%', v:(tot('discount fee')/tot('total for income')*100).toFixed(0)+'%', c:'neu'},
-    {l:'BPO%',      v:(tot('expense bpo')/tot('total for expenses')*100).toFixed(0)+'%',c:'neg'},
-  ];
-  document.getElementById('stat-list').innerHTML=items.map(i=>
-    `<div class="stat-item"><span class="stat-label">${i.l}</span><span class="stat-val ${i.c}">${i.v}</span></div>`
-  ).join('');
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// PANEL NAVIGATION
-// ═══════════════════════════════════════════════════════════════════
-function goPanel(el,panel){
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  el.classList.add('active');
-  ['sankey','ebit'].forEach(p=>{
-    document.getElementById('panel-'+p).style.display=p===panel?'block':'none';
-  });
-  if(panel==='ebit'&&G.loaded) renderEBIT();
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// RENDER ALL — punto de entrada tras cargar datos
-// ═══════════════════════════════════════════════════════════════════
-function renderAll(){
-  document.getElementById('panel-empty').style.display='none';
-  document.getElementById('panel-sankey').style.display='block';
-  document.getElementById('panel-ebit').style.display='none';
-
-  const tag=G.period||G.months.join(' · ');
-  document.getElementById('period-tag').textContent=tag;
-  document.getElementById('period-tag2').textContent=tag;
-  document.getElementById('footer-ts').textContent=
-    'Datos cargados: '+new Date().toLocaleString('es-CO');
-
-  renderKPIs();
-  drawSankey('full');
-  renderSidebar();
-
-  document.getElementById('sidebar-stats').style.display='block';
-  document.getElementById('badge-live').classList.add('active');
-  document.getElementById('live-dot').classList.add('on');
-  document.getElementById('badge-text').textContent='Datos cargados';
-  document.getElementById('btn-export').disabled=false;
-  G.loaded=true;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// FILE HANDLING
-// ═══════════════════════════════════════════════════════════════════
-function loadFile(input){
-  const file=input.files[0];
-  if(!file)return;
-  showFileStatus(file.name);
-  const reader=new FileReader();
-  reader.onload=e=>{ processCSV(e.target.result); renderAll(); };
-  reader.readAsText(file);
-  input.value='';
-}
-
-function showFileStatus(name){
-  const dz=document.getElementById('drop-zone');
-  dz.style.display='none';
-  const fs=document.getElementById('file-status');
-  fs.style.display='block';
-  fs.innerHTML=`<div class="file-loaded">
-    <span class="file-name">📄 ${name}</span>
-    <span class="file-clear" onclick="clearFile()" title="Quitar">✕</span>
+  el.innerHTML=`
+  <div class="sec-hdr"><div class="sec-lbl">Profit & Loss</div><div class="sec-line"></div></div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--bg4);display:flex;justify-content:space-between;align-items:center">
+      <span class="card-title" style="margin:0">Nu-Ko Capital LLC · QuickBooks · Accrual Basis</span>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--wh4)">Enero – Marzo 2026</span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Concepto</th><th>Enero</th><th>Febrero</th><th>Marzo</th><th>Total</th></tr></thead>
+      <tbody>
+        ${sec('Ingresos operativos')}
+        ${incKeys.map(k=>row(k,k,true,true)).join('')}
+        ${totRow('Total ingresos','Total for Income')}
+        ${sec('Costo de ventas — COGS')}
+        ${row('Financial Interests','Financial Interests',true,false)}
+        ${totRow('Gross Profit','Gross Profit')}
+        ${sec('Gastos operativos')}
+        ${expKeys.map(k=>row(k,k,true,false)).join('')}
+        ${sec('Software & Apps')}
+        ${softKeys.map(k=>row(k,k,true,false)).join('')}
+        ${totRow('Total Software & Apps','Total for Software & Apps')}
+        ${totRow('Total gastos','Total for Expenses')}
+        ${totRow('Utilidad operativa neta','Net Operating Income')}
+        ${sec('Otros ingresos')}
+        ${otherKeys.map(k=>row(k,k,true,true)).join('')}
+        ${totRow('Total otros ingresos','Total for Other income')}
+        ${totRow('UTILIDAD NETA (Net Income)','Net Income',true)}
+      </tbody>
+    </table></div>
+    <div style="padding:9px 16px;border-top:1px solid var(--bg4);font-family:var(--mono);font-size:9px;color:var(--wh4)">
+      Fuente: Nu-Ko Capital LLC · QuickBooks · Accrual Basis
+    </div>
   </div>`;
 }
 
-function clearFile(){
-  document.getElementById('drop-zone').style.display='block';
-  document.getElementById('file-status').style.display='none';
-  document.getElementById('sidebar-stats').style.display='none';
-  document.getElementById('panel-empty').style.display='flex';
-  document.getElementById('panel-sankey').style.display='none';
-  document.getElementById('panel-ebit').style.display='none';
-  document.getElementById('badge-live').classList.remove('active');
-  document.getElementById('live-dot').classList.remove('on');
-  document.getElementById('badge-text').textContent='Sin datos';
-  document.getElementById('btn-export').disabled=true;
-  G={rows:{},months:[],period:'',loaded:false,skView:'full'};
+// ── GASTOS ───────────────────────────────────────────────────────────
+function renderGastos(){
+  if(!D)return;
+  document.getElementById('gastos-empty').style.display='none';
+  const el=document.getElementById('gastos-content');
+  el.style.display='block';
+
+  const items=[
+    ['Expense BPO',              tot('Expense BPO'),              '#D4537E'],
+    ['Bad Debt',                 tot('Bad Debt'),                  '#A32D2D'],
+    ['General business expenses',tot('General business expenses'), '#A32D2D'],
+    ['Software & Apps',          tot('Total for Software & Apps'), '#888780'],
+    ['Contract labor',           tot('Contract labor'),            '#888780'],
+    ['Legal & Professional',     tot('Legal & Professional Services'),'#888780'],
+    ['Bank Charges & Fees',      tot('Total for Bank Charges & Fees'),'#888780'],
+    ['UCC + Postal',             tot('Total for Commissions & fees'),'#888780'],
+    ['Insurance',                tot('Insurance'),                 '#888780'],
+    ['Taxes paid',               tot('Taxes paid'),                '#888780'],
+  ].filter(([,v])=>Math.abs(v)>0.01).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+
+  const tExp=tot('Total for Expenses');
+  const maxV=Math.max(...items.map(([,v])=>Math.abs(v)));
+
+  const softItems=[
+    ['Factorview',tot('Factorview')],['Equifax',tot('Equifax')],
+    ['Experian',tot('Experian')],['Transflo',tot('Transflo')],
+    ['Intuit',tot('Intuit')],['B2Chat',tot('B2Chat')],
+    ['DoTribe',tot('DoTribe')],['IDScan',tot('IDScan')],['Saasant',tot('Saasant')],
+  ].filter(([,v])=>Math.abs(v)>0).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+
+  const softTotal=tot('Total for Software & Apps');
+
+  el.innerHTML=`
+  <div class="sec-hdr"><div class="sec-lbl">Composición de gastos · Ene–Mar 2026</div><div class="sec-line"></div></div>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Categoría</th><th>Total</th><th>% del total</th><th>Distribución</th></tr></thead>
+      <tbody>
+        ${items.map(([label,v,color])=>{
+          const pct=tExp?(Math.abs(v)/Math.abs(tExp)*100).toFixed(1):0;
+          const bar=maxV?(Math.abs(v)/maxV*100).toFixed(1):0;
+          return`<tr><td>${label}</td><td class="tn">${fmt(v,false)}</td><td class="tn">${pct}%</td>
+            <td><div class="bar-wrap"><div class="bar-track"><div class="bar-fill" style="width:${bar}%;background:${color}"></div></div>
+            <span style="font-size:10px;color:var(--wh4);min-width:32px">${pct}%</span></div></td></tr>`;
+        }).join('')}
+        <tr class="t-tot"><td>Total gastos</td><td class="tn">${fmt(tExp,false)}</td><td>100%</td><td></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="sec-hdr"><div class="sec-lbl">Desglose Software & Apps</div><div class="sec-line"></div></div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Proveedor</th><th>Total Ene–Mar</th><th>% del rubro</th></tr></thead>
+      <tbody>
+        ${softItems.map(([label,v])=>{
+          const pct=softTotal?(Math.abs(v)/Math.abs(softTotal)*100).toFixed(1):0;
+          return`<tr><td>${label}</td><td class="tn">${fmt(v,false)}</td><td class="tn">${pct}%</td></tr>`;
+        }).join('')}
+        <tr class="t-tot"><td>Total Software & Apps</td><td class="tn">${fmt(softTotal,false)}</td><td>100%</td></tr>
+      </tbody>
+    </table></div>
+  </div>`;
 }
 
-function dragOver(e){ e.preventDefault(); document.getElementById('drop-zone').classList.add('drag'); }
-function dragLeave(e){ document.getElementById('drop-zone').classList.remove('drag'); }
-function dropFile(e){
-  e.preventDefault();
-  document.getElementById('drop-zone').classList.remove('drag');
-  const file=e.dataTransfer.files[0];
-  if(!file||!file.name.endsWith('.csv'))return;
-  showFileStatus(file.name);
-  const reader=new FileReader();
-  reader.onload=ev=>{ processCSV(ev.target.result); renderAll(); };
-  reader.readAsText(file);
-}
-
-// resize
-window.addEventListener('resize',()=>{ if(G.loaded) drawSankey(G.skView); });
+window.addEventListener('resize',()=>{if(D)drawSankey(skView);});
 </script>
 </body>
 </html>
